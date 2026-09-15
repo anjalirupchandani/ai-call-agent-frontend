@@ -75,6 +75,20 @@ export async function getMe() {
   return request("/auth/me");
 }
 
+// ---- Notifications ------------------------------------------------
+
+export async function getNotifications() {
+  return request("/notifications");
+}
+
+export async function markNotificationAsRead(id) {
+  return request(`/notifications/${id}/read`, { method: "PATCH" });
+}
+
+export async function markAllNotificationsAsRead() {
+  return request("/notifications/read-all", { method: "PATCH" });
+}
+
 // ---- User Profile Management --------------------------------------
 
 /**

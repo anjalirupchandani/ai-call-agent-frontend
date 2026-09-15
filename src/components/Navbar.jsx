@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Bell, Moon, Sun } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from "../services/api";
 import Waveform from "./Waveform";
 
 const LINKS = [
@@ -11,21 +17,43 @@ const LINKS = [
 
 const THEME_STORAGE_KEY = "theme";
 
-const INITIAL_NOTIFICATIONS = [
-  { id: "welcome", title: "Your AI call agent is ready", detail: "Sign in to start building your first workflow.", time: "Now", unread: true },
-  { id: "signal", title: "New voice models available", detail: "Explore the latest voices in your workspace.", time: "5m ago", unread: true },
-  { id: "tip", title: "Quick tip", detail: "Try a test call before launching your campaign.", time: "1h ago", unread: true },
-];
+const TYPE_LABELS = {
+  call_completed: "Call completed",
+  call_failed: "Call failed",
+  call_scheduled: "Call scheduled",
+  call_cancelled: "Call cancelled",
+  contact_added: "Contact added",
+  template_created: "Template created",
+  knowledge_uploaded: "Knowledge uploaded",
+  system: "System update",
+};
+
+function formatNotificationTime(createdAt) {
+  if (!createdAt) return "";
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+  const absoluteSeconds = Math.abs(seconds);
+  if (absoluteSeconds < 60) return "Now";
+  if (absoluteSeconds < 3600) return `${Math.round(absoluteSeconds / 60)}m`;
+  if (absoluteSeconds < 86400) return `${Math.round(absoluteSeconds / 3600)}h`;
+  return `${Math.round(absoluteSeconds / 86400)}d`;
+}
 
 export default function Navbar() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [theme, setTheme] = useState(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const unreadNotifications = notifications.filter((n) => n.unread).length;
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
   const isDark = theme === "dark";
 
   useEffect(() => {
@@ -33,12 +61,71 @@ export default function Navbar() {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [isDark, theme]);
 
-  function markAllNotificationsRead() {
-    setNotifications((cur) => cur.map((n) => ({ ...n, unread: false })));
+  useEffect(() => {
+    if (authLoading || !user) {
+      setNotifications([]);
+      setNotificationsError("");
+      setNotificationsLoading(false);
+      return;
+    }
+
+    let active = true;
+    setNotificationsLoading(true);
+    setNotificationsError("");
+
+    getNotifications()
+      .then((data) => {
+        if (active) setNotifications(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setNotificationsError("Unable to load notifications.");
+      })
+      .finally(() => {
+        if (active) setNotificationsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [notificationsOpen]);
+
+  async function markAllNotificationsRead() {
+    if (!unreadNotifications) return;
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+    } catch {
+      setNotificationsError("Unable to update notifications.");
+    }
   }
 
-  function markNotificationRead(id) {
-    setNotifications((cur) => cur.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+  async function openNotification(notification) {
+    if (!notification.read) {
+      try {
+        await markNotificationAsRead(notification._id);
+        setNotifications((current) =>
+          current.map((item) =>
+            item._id === notification._id ? { ...item, read: true } : item,
+          ),
+        );
+      } catch {
+        setNotificationsError("Unable to update notification status.");
+      }
+    }
+
+    setNotificationsOpen(false);
+    if (notification.link) navigate(notification.link);
   }
 
   return (
@@ -101,7 +188,14 @@ export default function Navbar() {
                 className="absolute right-0 top-12 z-40 w-80 overflow-hidden rounded-2xl border border-border bg-surface shadow-(--shadow-card)"
               >
                 <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
-                  <p className="text-sm font-semibold text-ink">Notifications</p>
+                  <div>
+                    <p className="text-sm font-semibold text-ink">Notifications</p>
+                    {user && (
+                      <p className="mt-0.5 text-xs text-ink-muted">
+                        {unreadNotifications ? `${unreadNotifications} unread` : "All caught up"}
+                      </p>
+                    )}
+                  </div>
                   {unreadNotifications > 0 && (
                     <button
                       type="button"
@@ -113,19 +207,43 @@ export default function Navbar() {
                   )}
                 </div>
                 <div className="max-h-80 overflow-y-auto p-1.5">
-                  {notifications.map((n) => (
+                  {!user && !authLoading && (
+                    <div className="px-3 py-6 text-center">
+                      <p className="text-sm font-medium text-ink">Sign in to view notifications</p>
+                      <Link
+                        to="/login"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="mt-2 inline-flex text-xs font-medium text-accent hover:text-accent-hover"
+                      >
+                        Sign in
+                      </Link>
+                    </div>
+                  )}
+                  {user && notificationsLoading && (
+                    <p className="px-3 py-6 text-center text-sm text-ink-muted">Loading notifications…</p>
+                  )}
+                  {user && !notificationsLoading && notificationsError && (
+                    <p role="alert" className="px-3 py-6 text-center text-sm text-warn-ink">{notificationsError}</p>
+                  )}
+                  {user && !notificationsLoading && !notificationsError && !notifications.length && (
+                    <p className="px-3 py-6 text-center text-sm text-ink-muted">No notifications yet.</p>
+                  )}
+                  {user && !notificationsLoading && !notificationsError && notifications.map((notification) => (
                     <button
-                      key={n.id}
+                      key={notification._id}
                       type="button"
-                      onClick={() => markNotificationRead(n.id)}
+                      onClick={() => openNotification(notification)}
                       className="flex w-full gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-sunk"
                     >
-                      <span className={`mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-accent ${n.unread ? "opacity-100" : "opacity-0"}`} />
+                      <span className={`mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-accent ${notification.read ? "opacity-0" : "opacity-100"}`} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-ink">{n.title}</span>
-                        <span className="mt-0.5 block text-xs leading-relaxed text-ink-muted">{n.detail}</span>
+                        <span className="block text-sm font-medium text-ink">{notification.title}</span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-ink-muted">{notification.message}</span>
+                        <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-accent">
+                          {TYPE_LABELS[notification.type] || TYPE_LABELS.system}
+                        </span>
                       </span>
-                      <span className="shrink-0 pt-0.5 text-xs text-ink-muted">{n.time}</span>
+                      <span className="shrink-0 pt-0.5 text-xs text-ink-muted">{formatNotificationTime(notification.createdAt)}</span>
                     </button>
                   ))}
                 </div>
