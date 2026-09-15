@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bell, Moon, Sun } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -51,6 +51,7 @@ export default function Navbar() {
   });
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const notificationsRef = useRef(null);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
   const unreadNotifications = notifications.filter((notification) => !notification.read).length;
@@ -96,8 +97,18 @@ export default function Navbar() {
       if (event.key === "Escape") setNotificationsOpen(false);
     }
 
+    function closeOnOutsideClick(event) {
+      if (!notificationsRef.current?.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    }
+
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+    };
   }, [notificationsOpen]);
 
   async function markAllNotificationsRead() {
@@ -164,7 +175,7 @@ export default function Navbar() {
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
           </button>
 
-          <div className="relative">
+          <div ref={notificationsRef} className="relative">
             <button
               type="button"
               onClick={() => setNotificationsOpen((c) => !c)}

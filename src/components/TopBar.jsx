@@ -1,37 +1,39 @@
 // components/TopBar.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, Search, LogOut, Moon, Sun, UserCog } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import {
+  getNotifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+} from "../services/api";
 
 const THEME_STORAGE_KEY = "theme";
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "call-failed",
-    title: "Call to Tom Whitcombe failed",
-    detail: "The call ended before connecting.",
-    time: "2m ago",
-    callId: "call_1005",
-    unread: true,
-  },
-  {
-    id: "call-live",
-    title: "Marcus Bell is on a call",
-    detail: "Riley has been connected for 2 minutes.",
-    time: "12m ago",
-    callId: "call_1007",
-    unread: true,
-  },
-  {
-    id: "call-complete",
-    title: "Call with Priya Nandakumar completed",
-    detail: "The call lasted 1 minute and 58 seconds.",
-    time: "1h ago",
-    callId: "call_1002",
-    unread: true,
-  },
-];
+const TYPE_LABELS = {
+  call_completed: "Call completed",
+  call_failed: "Call failed",
+  call_scheduled: "Call scheduled",
+  call_cancelled: "Call cancelled",
+  contact_added: "Contact added",
+  template_created: "Template created",
+  knowledge_uploaded: "Knowledge uploaded",
+  system: "System update",
+};
+
+function formatNotificationTime(createdAt) {
+  if (!createdAt) return "";
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+  const absoluteSeconds = Math.abs(seconds);
+  if (absoluteSeconds < 60) return "Now";
+  if (absoluteSeconds < 3600) return `${Math.round(absoluteSeconds / 60)}m`;
+  if (absoluteSeconds < 86400) return `${Math.round(absoluteSeconds / 3600)}h`;
+  return `${Math.round(absoluteSeconds / 86400)}d`;
+}
 
 function initialsFor(name) {
   if (!name) return "?";
@@ -47,16 +49,68 @@ export default function TopBar({ title, subtitle }) {
   });
   const [open, setOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const { user, logout } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const notificationsRef = useRef(null);
+  const { user, loading: authLoading, logout } = useAuth();
   const navigate = useNavigate();
-  const unreadNotifications = notifications.filter((notification) => notification.unread).length;
+  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
   const isDark = theme === "dark";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [isDark, theme]);
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      setNotifications([]);
+      setNotificationsError("");
+      setNotificationsLoading(false);
+      return;
+    }
+
+    let active = true;
+    setNotificationsLoading(true);
+    setNotificationsError("");
+
+    getNotifications()
+      .then((data) => {
+        if (active) setNotifications(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setNotificationsError("Unable to load notifications.");
+      })
+      .finally(() => {
+        if (active) setNotificationsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    }
+
+    function closeOnOutsideClick(event) {
+      if (!notificationsRef.current?.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+    };
+  }, [notificationsOpen]);
 
   function handleSignOut() {
     logout();
@@ -68,20 +122,32 @@ export default function TopBar({ title, subtitle }) {
     navigate("/settings");
   }
 
-  function markAllNotificationsRead() {
-    setNotifications((current) =>
-      current.map((notification) => ({ ...notification, unread: false })),
-    );
+  async function markAllNotificationsRead() {
+    if (!unreadNotifications) return;
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+    } catch {
+      setNotificationsError("Unable to update notifications.");
+    }
   }
 
-  function openNotification(notification) {
-    setNotifications((current) =>
-      current.map((item) =>
-        item.id === notification.id ? { ...item, unread: false } : item,
-      ),
-    );
+  async function openNotification(notification) {
+    if (!notification.read) {
+      try {
+        await markNotificationAsRead(notification._id);
+        setNotifications((current) =>
+          current.map((item) =>
+            item._id === notification._id ? { ...item, read: true } : item,
+          ),
+        );
+      } catch {
+        setNotificationsError("Unable to update notification status.");
+      }
+    }
+
     setNotificationsOpen(false);
-    navigate(`/dashboard/calls/${notification.callId}`);
+    if (notification.link) navigate(notification.link);
   }
 
   return (
@@ -117,7 +183,7 @@ export default function TopBar({ title, subtitle }) {
           {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <div className="relative">
+        <div ref={notificationsRef} className="relative">
           <button
             type="button"
             onClick={() => {
@@ -142,7 +208,12 @@ export default function TopBar({ title, subtitle }) {
               className="absolute right-0 top-12 z-20 w-80 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
             >
               <div className="flex items-center justify-between border-b border-[var(--color-border-soft)] px-4 py-3">
-                <p className="text-sm font-semibold text-[var(--color-ink)]">Notifications</p>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-ink)]">Notifications</p>
+                  <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+                    {unreadNotifications ? `${unreadNotifications} unread` : "All caught up"}
+                  </p>
+                </div>
                 {unreadNotifications > 0 && (
                   <button
                     type="button"
@@ -154,21 +225,33 @@ export default function TopBar({ title, subtitle }) {
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto p-1.5">
-                {notifications.map((notification) => (
+                {notificationsLoading && (
+                  <p className="px-3 py-6 text-center text-sm text-[var(--color-ink-muted)]">Loading notifications…</p>
+                )}
+                {!notificationsLoading && notificationsError && (
+                  <p role="alert" className="px-3 py-6 text-center text-sm text-[var(--color-warn-ink)]">{notificationsError}</p>
+                )}
+                {!notificationsLoading && !notificationsError && !notifications.length && (
+                  <p className="px-3 py-6 text-center text-sm text-[var(--color-ink-muted)]">No notifications yet.</p>
+                )}
+                {!notificationsLoading && !notificationsError && notifications.map((notification) => (
                   <button
-                    key={notification.id}
+                    key={notification._id}
                     type="button"
                     onClick={() => openNotification(notification)}
                     className="flex w-full gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-[var(--color-surface-sunk)]"
                   >
                     <span
-                      className={`mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] ${notification.unread ? "opacity-100" : "opacity-0"}`}
+                      className={`mt-1.5 flex h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] ${notification.read ? "opacity-0" : "opacity-100"}`}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-[var(--color-ink)]">{notification.title}</span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-[var(--color-ink-muted)]">{notification.detail}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-[var(--color-ink-muted)]">{notification.message}</span>
+                      <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-[var(--color-accent)]">
+                        {TYPE_LABELS[notification.type] || TYPE_LABELS.system}
+                      </span>
                     </span>
-                    <span className="shrink-0 pt-0.5 text-xs text-[var(--color-ink-muted)]">{notification.time}</span>
+                    <span className="shrink-0 pt-0.5 text-xs text-[var(--color-ink-muted)]">{formatNotificationTime(notification.createdAt)}</span>
                   </button>
                 ))}
               </div>
