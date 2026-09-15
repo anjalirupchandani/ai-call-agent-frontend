@@ -5,32 +5,34 @@ export default function StatCard({ label, value, delta, icon: Icon, accent = "ac
     gold: "bg-gold-dim text-gold-ink",
   }[accent];
 
-  const isPositive = delta?.startsWith("+");
+  const isPositive = delta?.startsWith("+") || delta?.startsWith("↑");
+  const hasValue = value !== null && value !== undefined && value !== "";
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-card)">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-start justify-between">
-        <span className="text-sm font-medium text-ink-muted">{label}</span>
+        <span className="text-sm font-medium text-[var(--color-ink-muted)]">{label}</span>
         {Icon && (
           <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accentBg}`}>
             <Icon size={17} strokeWidth={2} />
           </span>
         )}
       </div>
-      <div className="mt-3 flex items-end justify-between">
-        <span className="font-display text-[28px] font-semibold tracking-tight text-ink">
-          {value}
-        </span>
-        {delta && (
-          <span
-            className={`mb-1 font-mono text-xs font-medium ${
-              isPositive ? "text-signal-ink" : "text-warn-ink"
-            }`}
-          >
-            {delta}
-          </span>
-        )}
-      </div>
+      {hasValue ? (
+        <>
+          <div className="mt-3 flex items-end justify-between">
+            <span className="font-[family-name:var(--font-display)] text-[28px] font-semibold tracking-tight text-[var(--color-ink)]">{value}</span>
+          </div>
+          <p className={`mt-2 font-mono text-xs font-medium ${delta ? (isPositive ? "text-[var(--color-signal-ink)]" : "text-[var(--color-warn-ink)]") : "text-[var(--color-ink-muted)]"}`}>
+            {delta || "—"}
+          </p>
+        </>
+      ) : (
+        <div className="mt-4 flex items-center gap-2.5 text-sm text-[var(--color-ink-muted)]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-surface-sunk)]"><span className="h-2 w-2 rounded-full bg-[var(--color-border)]" /></span>
+          <span>No calls yet.</span>
+        </div>
+      )}
     </div>
   );
 }

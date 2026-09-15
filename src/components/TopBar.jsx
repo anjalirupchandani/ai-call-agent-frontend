@@ -167,9 +167,11 @@ export default function TopBar({ title, subtitle }) {
         <div className="hidden items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-2 lg:flex">
           <Search size={16} className="text-[var(--color-ink-muted)]" />
           <input
+            aria-label="Search calls and contacts"
             placeholder="Search calls, contacts…"
-            className="w-48 bg-transparent text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none"
+            className="w-44 bg-transparent text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none"
           />
+          <kbd className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-0.5 font-mono text-[10px] font-medium text-[var(--color-ink-muted)]">⌘K</kbd>
         </div>
 
         <button
@@ -271,8 +273,8 @@ export default function TopBar({ title, subtitle }) {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-accent)] text-xs font-semibold text-white">
               {initialsFor(user?.name)}
             </span>
-            <span className="hidden text-sm font-medium text-[var(--color-ink)] sm:inline">
-              {user?.name || "Account"}
+            <span className="hidden text-left sm:inline">
+              <span className="block text-sm font-medium leading-tight text-[var(--color-ink)]">{user?.name || "Account"}</span>
             </span>
             <ChevronDown size={14} className="text-[var(--color-ink-muted)]" />
           </button>
@@ -280,12 +282,8 @@ export default function TopBar({ title, subtitle }) {
           {open && (
             <div className="absolute right-0 top-12 z-20 w-52 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-card)]">
               <div className="px-3 py-2">
-                <p className="text-sm font-medium text-[var(--color-ink)]">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-[var(--color-ink-muted)]">
-                  {user?.email}
-                </p>
+                <p className="text-sm font-medium text-[var(--color-ink)]">{user?.name}</p>
+                <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{user?.email}</p>
               </div>
               <div className="my-1 h-px bg-[var(--color-border-soft)]" />
 

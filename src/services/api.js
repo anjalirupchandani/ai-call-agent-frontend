@@ -151,8 +151,8 @@ export async function deleteAccount() {
 
 // ---- Dashboard & Calls ------------------------------------------------
 
-export async function getDashboardStats() {
-  return request("/dashboard/stats");
+export async function getDashboardStats(period = "7d") {
+  return request(`/dashboard/stats?period=${encodeURIComponent(period)}`);
 }
 
 export async function getCalls() {
