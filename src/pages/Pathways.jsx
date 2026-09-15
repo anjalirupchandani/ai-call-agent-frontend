@@ -136,6 +136,7 @@ export default function Pathways() {
     if (pathwayId) {
       return updatePathway(pathwayId, payload);
     }
+    
     const created = await createPathway(payload);
     setPathwayId(created._id);
     return created;
