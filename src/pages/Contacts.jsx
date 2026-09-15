@@ -17,12 +17,12 @@ function AddContactModal({ onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-(--shadow-card)">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--color-ink)]">
+          <h2 className="font-display text-lg font-semibold text-ink">
             Add Contact
           </h2>
-          <button onClick={onClose} className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+          <button onClick={onClose} className="text-ink-muted hover:text-ink">
             <X size={18} />
           </button>
         </div>
@@ -32,25 +32,25 @@ function AddContactModal({ onClose, onCreate }) {
             placeholder="Full name"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+            className="rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
           />
           <input
             required
             placeholder="Phone number"
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm font-[family-name:var(--font-mono)] focus:border-[var(--color-accent)] focus:outline-none"
+            className="rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-sm font-mono focus:border-accent focus:outline-none"
           />
           <input
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+            className="rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
           />
           <select
             value={form.tag}
             onChange={(e) => setForm((f) => ({ ...f, tag: e.target.value }))}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+            className="rounded-xl border border-border bg-canvas px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
           >
             <option>Lead</option>
             <option>Customer</option>
@@ -58,7 +58,7 @@ function AddContactModal({ onClose, onCreate }) {
           </select>
           <button
             type="submit"
-            className="mt-1 rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+            className="mt-1 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
           >
             Add Contact
           </button>
@@ -93,18 +93,18 @@ export default function Contacts() {
   return (
     <DashboardShell title="Contacts" subtitle={`${contacts.length} people in your address book`}>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 sm:w-80">
-          <Search size={16} className="text-[var(--color-ink-muted)]" />
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 sm:w-80">
+          <Search size={16} className="text-ink-muted" />
           <input
             placeholder="Search contacts…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none"
+            className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
           />
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 rounded-xl bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-accent-hover)]"
+          className="flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
         >
           <UserPlus size={16} />
           Add Contact
@@ -112,7 +112,7 @@ export default function Contacts() {
       </div>
 
       {loading ? (
-        <div className="flex h-40 items-center justify-center text-sm text-[var(--color-ink-muted)]">
+        <div className="flex h-40 items-center justify-center text-sm text-ink-muted">
           Loading contacts…
         </div>
       ) : (
@@ -125,7 +125,7 @@ export default function Contacts() {
             />
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-full py-10 text-center text-sm text-[var(--color-ink-muted)]">
+            <p className="col-span-full py-10 text-center text-sm text-ink-muted">
               No contacts match "{query}".
             </p>
           )}
