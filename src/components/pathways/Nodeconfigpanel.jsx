@@ -5,14 +5,14 @@ import { NODE_REGISTRY } from "./Noderegistry";
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-soft)]">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold text-ink-soft">{label}</span>
       {children}
     </label>
   );
 }
 
 const inputClass =
-  "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] px-3 py-2 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-dim)]";
+  "w-full rounded-lg border border-border bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-dim";
 
 export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
   const meta = NODE_REGISTRY[node.type];
@@ -45,8 +45,8 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
   }
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-surface)]">
-      <div className="flex items-center justify-between border-b border-[var(--color-border-soft)] px-4 py-3.5">
+    <aside className="flex w-72 shrink-0 flex-col border-l border-border bg-surface">
+      <div className="flex items-center justify-between border-b border-border-soft px-4 py-3.5">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
@@ -55,14 +55,14 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
             <Icon size={14} strokeWidth={2.25} />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[var(--color-ink)]">{meta.label}</p>
-            <p className="text-[11px] text-[var(--color-ink-muted)]">Node settings</p>
+            <p className="truncate text-sm font-semibold text-ink">{meta.label}</p>
+            <p className="text-[11px] text-ink-muted">Node settings</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunk)]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunk"
           aria-label="Close"
         >
           <X size={15} />
@@ -110,20 +110,18 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
                 placeholder="e.g. caller asks for support"
               />
             </Field>
-           
+
             <div>
-  <label className="mb-2 block text-xs font-semibold text-[var(--color-ink-soft)]">
-    Otherwise
-  </label>
+              <label className="mb-2 block text-xs font-semibold text-ink-soft">
+                Otherwise
+              </label>
 
-  <textarea
-    className="w-full rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface-sunk)] px-3 py-2.5 text-xs leading-relaxed text-[var(--color-ink-muted)] outline-none resize-y placeholder:text-[var(--color-ink-muted)]"
-    placeholder="Write what should happen otherwise..."
-    rows={3}
-  />
-</div>
-
-
+              <textarea
+                className="w-full resize-y rounded-lg border border-dashed border-border bg-surface-sunk px-3 py-2.5 text-xs leading-relaxed text-ink-muted outline-none placeholder:text-ink-muted"
+                placeholder="Write what should happen otherwise..."
+                rows={3}
+              />
+            </div>
           </>
         ) : null}
 
@@ -138,12 +136,12 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
         </Field>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-[var(--color-border-soft)] px-4 py-3.5">
+      <div className="flex items-center gap-2 border-t border-border-soft px-4 py-3.5">
         <button
           type="button"
           onClick={() => onDelete(node.id)}
           disabled={node.type === "start"}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-warn-ink)] transition-colors hover:bg-[var(--color-warn-dim)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-warn-ink transition-colors hover:bg-warn-dim disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Delete node"
           title={node.type === "start" ? "The start node can't be deleted" : "Delete node"}
         >
@@ -152,7 +150,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
         <button
           type="button"
           onClick={handleSave}
-          className="flex-1 rounded-lg bg-[var(--color-accent)] py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-accent-hover)]"
+          className="flex-1 rounded-lg bg-accent py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
         >
           Save
         </button>

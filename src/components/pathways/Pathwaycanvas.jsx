@@ -305,7 +305,7 @@ export default function PathwayCanvas({
   }, [nodes, pan, scale]);
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-[var(--color-canvas)]">
+    <div className="relative flex-1 overflow-hidden bg-canvas">
       <div
         ref={containerRef}
         data-canvas-bg
@@ -317,7 +317,9 @@ export default function PathwayCanvas({
           setDragOverCanvas(true);
         }}
         onDragLeave={() => setDragOverCanvas(false)}
-        className={`h-full w-full cursor-grab active:cursor-grabbing ${dragOverCanvas ? "ring-2 ring-inset ring-[var(--color-accent)]" : ""}`}
+        className={`h-full w-full cursor-grab active:cursor-grabbing ${
+          dragOverCanvas ? "ring-2 ring-inset ring-accent" : ""
+        }`}
       >
         <div
           data-canvas-bg
@@ -407,31 +409,31 @@ export default function PathwayCanvas({
       </div>
 
       {/* Zoom controls */}
-      <div className="absolute bottom-4 left-4 flex items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-[var(--shadow-card)]">
+      <div className="absolute bottom-4 left-4 flex items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-(--shadow-card)">
         <button
           type="button"
           onClick={() => zoomBy(0.85)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-sunk)]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk"
           aria-label="Zoom out"
         >
           <Minus size={15} />
         </button>
-        <span className="w-12 text-center text-xs font-medium text-[var(--color-ink-muted)]">
+        <span className="w-12 text-center text-xs font-medium text-ink-muted">
           {Math.round(scale * 100)}%
         </span>
         <button
           type="button"
           onClick={() => zoomBy(1 / 0.85)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-sunk)]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk"
           aria-label="Zoom in"
         >
           <Plus size={15} />
         </button>
-        <div className="mx-1 h-5 w-px bg-[var(--color-border-soft)]" />
+        <div className="mx-1 h-5 w-px bg-border-soft" />
         <button
           type="button"
           onClick={fitView}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-ink-soft)] hover:bg-[var(--color-surface-sunk)]"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk"
           aria-label="Fit view"
         >
           <Maximize size={14} />
@@ -440,7 +442,7 @@ export default function PathwayCanvas({
 
       {/* Minimap */}
       <div
-        className="absolute bottom-4 right-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
+        className="absolute bottom-4 right-4 overflow-hidden rounded-xl border border-border bg-surface shadow-(--shadow-card)"
         style={{ width: minimap.W, height: minimap.H }}
       >
         <svg width={minimap.W} height={minimap.H}>
@@ -462,4 +464,4 @@ export default function PathwayCanvas({
       </div>
     </div>
   );
-}   
+}
