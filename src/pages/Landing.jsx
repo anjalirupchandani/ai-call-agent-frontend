@@ -104,13 +104,13 @@ export default function Landing() {
               Get Started
               <ArrowRight size={16} />
             </Link>
-            <button
-              type="button"
+            <Link
+              to="/demo"
               className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3.5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-sunk)]"
             >
               <Play size={15} />
               Watch Demo
-            </button>
+            </Link>
           </div>
         </div>
 
