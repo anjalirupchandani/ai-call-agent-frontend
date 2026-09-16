@@ -88,7 +88,7 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
             placeholder="What the agent says or does at this step"
           />
         </Field>
-
+    
         <Field label="Instructions">
           <textarea
             className={`${inputClass} resize-none`}
