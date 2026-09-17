@@ -9,12 +9,6 @@ import {
 } from "../services/api";
 import Waveform from "./Waveform";
 
-const LINKS = [
-  { label: "Product", href: "#product" },
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Pricing", href: "#pricing" },
-];
-
 const THEME_STORAGE_KEY = "theme";
 
 const TYPE_LABELS = {
@@ -150,18 +144,6 @@ export default function Navbar() {
             AI Call Agent
           </span>
         </Link>
-
-        <nav className="hidden items-center gap-8 md:flex">
-          {LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-sm font-medium text-ink-soft transition-colors hover:text-ink"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
 
         <div className="flex items-center gap-3">
           <button

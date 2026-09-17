@@ -38,34 +38,34 @@ const SECTIONS = [
 const inputClasses =
   "rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-dim)] w-full";
 
-function Toggle({ label, defaultChecked = true, onChange }) {
-  const [checked, setChecked] = useState(defaultChecked);
+const SETTINGS_STORAGE_PREFIX = "ai_call_agent_settings";
 
-  const handleToggle = () => {
-    const newValue = !checked;
-    setChecked(newValue);
-    if (onChange) onChange(newValue);
-  };
-
+function Toggle({ label, checked, onChange }) {
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      className="flex w-full items-center justify-between py-3"
-    >
+    <label className="flex w-full cursor-pointer items-center justify-between py-3">
       <span className="text-sm text-[var(--color-ink-soft)]">{label}</span>
-      <span
-        className={`relative h-6 w-11 rounded-full transition-colors flex-shrink-0 ml-4 ${
-          checked ? "bg-[var(--color-accent)]" : "bg-[var(--color-border)]"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-            checked ? "translate-x-5" : "translate-x-0.5"
-          }`}
+      <span className="relative ml-4 h-6 w-11 flex-shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          aria-label={label}
+          className="peer sr-only"
         />
+        <span
+          aria-hidden="true"
+          className={`absolute inset-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-accent-dim)] ${
+            checked ? "bg-[var(--color-accent)]" : "bg-[var(--color-border)]"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              checked ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </span>
       </span>
-    </button>
+    </label>
   );
 }
 
@@ -107,6 +107,10 @@ export default function Settings() {
 
   // Agent & Settings state
   const [defaultAgent, setDefaultAgent] = useState(aiAgents[0]?.id || "");
+  const [agentSettings, setAgentSettings] = useState({
+    reschedule: true,
+    voicemail: false,
+  });
   const [voiceSettings, setVoiceSettings] = useState({
     voice: "female-us",
     speed: 1,
@@ -121,6 +125,7 @@ export default function Settings() {
     dailySummary: false,
     pushCompletion: true,
   });
+  const [settingsOwner, setSettingsOwner] = useState(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -130,18 +135,53 @@ export default function Settings() {
 
   // Load user data
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        bio: user.bio || "",
-        role: user.role || "User",
-        timezone: user.timezone || "UTC",
-        language: user.language || "en",
-      });
+    if (!user) return;
+
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      bio: user.bio || "",
+      role: user.role || "User",
+      timezone: user.timezone || "UTC",
+      language: user.language || "en",
+    });
+
+    const storageKey = `${SETTINGS_STORAGE_PREFIX}:${user.id || user._id || user.email}`;
+    const savedSettings = localStorage.getItem(storageKey);
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        if (parsedSettings.agentSettings) {
+          setAgentSettings((current) => ({ ...current, ...parsedSettings.agentSettings }));
+        }
+        if (parsedSettings.voiceSettings) {
+          setVoiceSettings((current) => ({ ...current, ...parsedSettings.voiceSettings }));
+        }
+        if (parsedSettings.callSettings) {
+          setCallSettings((current) => ({ ...current, ...parsedSettings.callSettings }));
+        }
+        if (parsedSettings.notificationSettings) {
+          setNotificationSettings((current) => ({
+            ...current,
+            ...parsedSettings.notificationSettings,
+          }));
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
     }
+    setSettingsOwner(storageKey);
   }, [user]);
+
+  useEffect(() => {
+    if (!settingsOwner) return;
+
+    localStorage.setItem(
+      settingsOwner,
+      JSON.stringify({ agentSettings, voiceSettings, callSettings, notificationSettings }),
+    );
+  }, [settingsOwner, agentSettings, voiceSettings, callSettings, notificationSettings]);
 
   // Handle form changes
   const handleChange = (e) => {
@@ -161,7 +201,9 @@ export default function Settings() {
   };
 
   const handleSettingsChange = (section, key, value) => {
-    if (section === "voice") {
+    if (section === "agent") {
+      setAgentSettings((prev) => ({ ...prev, [key]: value }));
+    } else if (section === "voice") {
       setVoiceSettings((prev) => ({ ...prev, [key]: value }));
     } else if (section === "call") {
       setCallSettings((prev) => ({ ...prev, [key]: value }));
@@ -503,13 +545,14 @@ export default function Settings() {
               <div className="mt-4 divide-y divide-[var(--color-border-soft)]">
                 <Toggle
                   label="Allow agent to reschedule calls automatically"
+                  checked={agentSettings.reschedule}
                   onChange={(val) =>
                     handleSettingsChange("agent", "reschedule", val)
                   }
                 />
                 <Toggle
                   label="Let agent leave voicemail on no-answer"
-                  defaultChecked={false}
+                  checked={agentSettings.voicemail}
                   onChange={(val) =>
                     handleSettingsChange("agent", "voicemail", val)
                   }
@@ -564,21 +607,21 @@ export default function Settings() {
               <div className="divide-y divide-[var(--color-border-soft)]">
                 <Toggle
                   label="Record calls automatically"
-                  defaultChecked={callSettings.recordCalls}
+                  checked={callSettings.recordCalls}
                   onChange={(val) =>
                     handleSettingsChange("call", "recordCalls", val)
                   }
                 />
                 <Toggle
                   label="Generate AI summary after each call"
-                  defaultChecked={callSettings.aiSummary}
+                  checked={callSettings.aiSummary}
                   onChange={(val) =>
                     handleSettingsChange("call", "aiSummary", val)
                   }
                 />
                 <Toggle
                   label="Retry once on missed calls"
-                  defaultChecked={callSettings.retryMissed}
+                  checked={callSettings.retryMissed}
                   onChange={(val) =>
                     handleSettingsChange("call", "retryMissed", val)
                   }
@@ -591,21 +634,21 @@ export default function Settings() {
               <div className="divide-y divide-[var(--color-border-soft)]">
                 <Toggle
                   label="Email me when a call fails"
-                  defaultChecked={notificationSettings.callFailed}
+                  checked={notificationSettings.callFailed}
                   onChange={(val) =>
                     handleSettingsChange("notifications", "callFailed", val)
                   }
                 />
                 <Toggle
                   label="Email me a daily summary"
-                  defaultChecked={notificationSettings.dailySummary}
+                  checked={notificationSettings.dailySummary}
                   onChange={(val) =>
                     handleSettingsChange("notifications", "dailySummary", val)
                   }
                 />
                 <Toggle
                   label="Push notification on call completion"
-                  defaultChecked={notificationSettings.pushCompletion}
+                  checked={notificationSettings.pushCompletion}
                   onChange={(val) =>
                     handleSettingsChange("notifications", "pushCompletion", val)
                   }
