@@ -155,6 +155,6 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
           Save
         </button>
       </div>
-    </aside>
+    </aside>       
   );
 }
