@@ -1,0 +1,12 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Environment files (real values must never be committed)
+.env
+.env.*
+!.env.example
+
+# Logs / editor
+*.log
+.vscode/

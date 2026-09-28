@@ -6,26 +6,64 @@ import StatusBadge from "../components/StatusBadge";
 import TranscriptPanel from "../components/TranscriptPanel";
 import { getCallById } from "../services/api";
 
+const POLL_MS = 8000;
+const MAX_POLLS_IN_PROGRESS = 75; // ~10 minutes
+const MAX_POLLS_AWAITING_SUMMARY = 10; // ~80 seconds
+
+// Edesy sends the summary/transcript a little after the call ends.
+function isWaitingForData(call) {
+  if (call.provider !== "edesy") return false; // only Edesy calls need re-checking
+  if (call.status === "In Progress") return true;
+  return call.status === "Completed" && !call.summary && (call.transcript?.length ?? 0) === 0;
+}
+
 export default function CallDetails() {
   const { callId } = useParams();
-  const [call, setCall] = useState(null);
+  const [call, setCall]   = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getCallById(callId).then(setCall);
+    let cancelled = false;
+    let timer = null;
+    let polls = 0;
+
+    const load = async () => {
+      try {
+        const data = await getCallById(callId);
+        if (cancelled) return;
+        setCall(data);
+        setError("");
+        const limit = data.status === "In Progress" ? MAX_POLLS_IN_PROGRESS : MAX_POLLS_AWAITING_SUMMARY;
+        if (isWaitingForData(data) && ++polls < limit) {
+          timer = setTimeout(load, POLL_MS);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Couldn't load this call.");
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [callId]);
 
   if (!call) {
     return (
       <DashboardShell title="Call Details">
         <div className="flex h-40 items-center justify-center text-sm text-[var(--color-ink-muted)]">
-          Loading call…
+          {error || "Loading call…"}
         </div>
       </DashboardShell>
     );
   }
 
+  const insights = call.insights || [];
+  const transcript = call.transcript || [];
+
   return (
-    <DashboardShell title="Call Details" subtitle={`Call ID: ${call.id}`}>
+    <DashboardShell title="Call Details" subtitle={`Call ID: ${call.executionId || call.id}`}>
       <Link
         to="/dashboard/calls"
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
@@ -68,21 +106,45 @@ export default function CallDetails() {
                 <dt className="text-[var(--color-ink-muted)]">Agent</dt>
                 <dd className="text-[var(--color-ink)]">{call.agent}</dd>
               </div>
+              {call.disposition && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-ink-muted)]">Outcome</dt>
+                  <dd className="text-[var(--color-ink)]">
+                    {call.disposition.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
+                  </dd>
+                </div>
+              )}
+              {call.executionId && (
+                <div className="flex justify-between gap-4">
+                  <dt className="shrink-0 text-[var(--color-ink-muted)]">Call ID</dt>
+                  <dd className="break-all text-right font-[family-name:var(--font-mono)] text-xs text-[var(--color-ink)]">
+                    {call.executionId}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
 
-          {/* Recording placeholder */}
+          {/* Recording */}
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
             <h3 className="mb-3 text-sm font-semibold text-[var(--color-ink)]">Recording</h3>
-            <div className="flex items-center gap-3 rounded-xl bg-[var(--color-surface-sunk)] p-4">
-              <PlayCircle size={28} className="shrink-0 text-[var(--color-ink-muted)]" />
-              <div className="flex-1">
-                <div className="h-1.5 w-full rounded-full bg-[var(--color-border)]">
-                  <div className="h-1.5 w-1/3 rounded-full bg-[var(--color-accent)]" />
+            {call.recordingUrl ? (
+              <audio controls preload="none" src={call.recordingUrl} className="w-full" />
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl bg-[var(--color-surface-sunk)] p-4">
+                <PlayCircle size={28} className="shrink-0 text-[var(--color-ink-muted)]" />
+                <div className="flex-1">
+                  <div className="h-1.5 w-full rounded-full bg-[var(--color-border)]">
+                    <div className="h-1.5 w-1/3 rounded-full bg-[var(--color-accent)]" />
+                  </div>
+                  <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">
+                    {call.provider === "edesy"
+                      ? "The recording appears here once the call ends and is processed"
+                      : "Audio will appear once voice storage is connected"}
+                  </p>
                 </div>
-                <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">Audio will appear once voice storage is connected</p>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -92,34 +154,53 @@ export default function CallDetails() {
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]">
               <Sparkles size={15} className="text-[var(--color-accent)]" /> Call Summary
             </h3>
-            <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">{call.summary}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+              {call.summary ||
+                (call.status === "In Progress"
+                  ? "The summary will appear once the call finishes."
+                  : "No summary available for this call.")}
+            </p>
 
-            <div className="my-5 h-px bg-[var(--color-border-soft)]" />
+            {insights.length > 0 && (
+              <>
+                <div className="my-5 h-px bg-[var(--color-border-soft)]" />
 
-            <h3 className="mb-3 text-sm font-semibold text-[var(--color-ink)]">AI-Generated Insights</h3>
-            <ul className="space-y-2">
-              {call.insights.map((insight, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[var(--color-ink-soft)]">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]" />
-                  {insight}
-                </li>
-              ))}
-            </ul>
+                <h3 className="mb-3 text-sm font-semibold text-[var(--color-ink)]">AI-Generated Insights</h3>
+                <ul className="space-y-2">
+                  {insights.map((insight, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-[var(--color-ink-soft)]">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]" />
+                      {insight}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-            <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-[var(--color-accent-dim)] p-4">
-              <ArrowRightCircle size={17} className="mt-0.5 shrink-0 text-[var(--color-accent)]" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-accent-ink)]">
-                  Follow-up recommendation
-                </p>
-                <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{call.followUp}</p>
+            {call.followUp && (
+              <div className="mt-5 flex items-start gap-2.5 rounded-xl bg-[var(--color-accent-dim)] p-4">
+                <ArrowRightCircle size={17} className="mt-0.5 shrink-0 text-[var(--color-accent)]" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-accent-ink)]">
+                    Follow-up recommendation
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{call.followUp}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
             <h3 className="mb-4 text-sm font-semibold text-[var(--color-ink)]">Full Transcript</h3>
-            <TranscriptPanel messages={call.transcript} />
+            {transcript.length > 0 ? (
+              <TranscriptPanel messages={transcript} />
+            ) : (
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                {call.status === "In Progress"
+                  ? "The transcript will appear once the call finishes."
+                  : "No transcript available for this call."}
+              </p>
+            )}
           </div>
         </div>
       </div>

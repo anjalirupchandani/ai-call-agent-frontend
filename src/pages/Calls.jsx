@@ -11,12 +11,13 @@ export default function Calls() {
   const [calls, setCalls] = useState([]);
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getCalls().then((data) => {
-      setCalls(data);
-      setLoading(false);
-    });
+    getCalls()
+      .then((data) => setCalls(data))
+      .catch((err) => setError(err.message || "Couldn't load call history."))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(
@@ -49,7 +50,7 @@ export default function Calls() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[980px] text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-ink-muted)]">
                   <th className="px-5 py-3 font-medium">Contact</th>
@@ -57,6 +58,8 @@ export default function Calls() {
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium">Duration</th>
                   <th className="px-5 py-3 font-medium">Type</th>
+                  <th className="px-5 py-3 font-medium">Call ID</th>
+                  <th className="px-5 py-3 font-medium">Summary</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3" />
                 </tr>
@@ -80,6 +83,17 @@ export default function Calls() {
                         {call.type}
                       </span>
                     </td>
+                    <td
+                      className="px-5 py-3.5 font-[family-name:var(--font-mono)] text-xs text-[var(--color-ink-muted)]"
+                      title={call.callId || undefined}
+                    >
+                      {call.callId ? `${call.callId.slice(0, 8)}…` : "—"}
+                    </td>
+                    <td className="max-w-[240px] px-5 py-3.5 text-[var(--color-ink-muted)]">
+                      <span className="block truncate" title={call.summary || undefined}>
+                        {call.summary || "—"}
+                      </span>
+                    </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge status={call.status} />
                     </td>
@@ -96,7 +110,10 @@ export default function Calls() {
                 ))}
               </tbody>
             </table>
-            {filtered.length === 0 && (
+            {error && (
+              <p className="py-10 text-center text-sm text-red-600">{error}</p>
+            )}
+            {!error && filtered.length === 0 && (
               <p className="py-10 text-center text-sm text-[var(--color-ink-muted)]">
                 No calls with status "{filter}".
               </p>

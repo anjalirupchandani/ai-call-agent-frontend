@@ -7,6 +7,18 @@ import CallControls from "../components/CallControls";
 import TranscriptPanel from "../components/TranscriptPanel";
 import { getCallById, endCall } from "../services/api";
 
+const POLL_INTERVAL_MS = 5000;
+const POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop asking after 10 minutes
+const POLL_MAX_CONSECUTIVE_ERRORS = 5;
+const TERMINAL_STATUSES = ["Completed", "Failed", "Missed", "Cancelled", "Ended"];
+
+const FINAL_LABELS = {
+  Completed: "Completed",
+  Missed: "No answer",
+  Failed: "Failed",
+  Cancelled: "Cancelled",
+};
+
 function formatDuration(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
@@ -18,69 +30,113 @@ export default function LiveCall() {
   const navigate   = useNavigate();
 
   // ---- state ---------------------------------------------------------------
-  const [seconds,    setSeconds]    = useState(0);
-  const [muted,      setMuted]      = useState(false);
-  const [callStatus, setCallStatus] = useState("connecting");
-  const [messages,   setMessages]   = useState([]);
+  const [seconds,       setSeconds]       = useState(0);
+  const [muted,         setMuted]         = useState(false);
+  const [callStatus,    setCallStatus]    = useState("connecting"); // connecting | active | ended
+  const [finalStatus,   setFinalStatus]   = useState("");
+  const [finalDuration, setFinalDuration] = useState("");
+  const [gaveUp,        setGaveUp]        = useState(false);
+  const [pollWarning,   setPollWarning]   = useState("");
+  const [messages,      setMessages]      = useState([]);
 
   // ---- refs ----------------------------------------------------------------
-  const timerRef = useRef(null);
-  const pollRef  = useRef(null);
+  const timerRef = useRef(null); // elapsed-time interval
+  const pollRef  = useRef(null); // next-poll timeout
 
-  // ---- polling the active provider for status + transcript -------------------
+  const stopTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+  const stopPolling = () => {
+    clearTimeout(pollRef.current);
+    pollRef.current = null;
+  };
+
+  // ---- polling our backend (which asks the voice provider) ------------------
+  // One request at a time: the next poll is only scheduled after the previous
+  // one finishes, and polling stops for good at a final status, after repeated
+  // errors, or after POLL_MAX_DURATION_MS. Polling never places a call.
   useEffect(() => {
     if (!callId) return;
 
-    // Start elapsed-time timer
+    let cancelled = false;
+    let consecutiveErrors = 0;
+    const startedAt = Date.now();
+
     timerRef.current = setInterval(() => {
       setSeconds((prev) => prev + 1);
     }, 1000);
 
+    const giveUp = (message) => {
+      setGaveUp(true);
+      setPollWarning(message);
+      stopTimer();
+      stopPolling();
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt > POLL_MAX_DURATION_MS) {
+        giveUp("Stopped checking after 10 minutes. The call may still be running — open Call History for its latest status.");
+        return;
+      }
+      pollRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
     const poll = async () => {
       try {
         const data = await getCallById(callId);
+        if (cancelled) return;
+        consecutiveErrors = 0;
 
-        // Update transcript if available
         if (Array.isArray(data.transcript) && data.transcript.length > 0) {
           setMessages(data.transcript);
         }
+        setPollWarning(data.syncError || "");
 
-        // Detect terminal states
-        const terminal = ["Completed", "Failed", "Missed", "Ended"];
-        if (terminal.includes(data.status)) {
+        if (TERMINAL_STATUSES.includes(data.status)) {
           setCallStatus("ended");
-          clearInterval(timerRef.current);
-          clearInterval(pollRef.current);
-          timerRef.current = null;
-          pollRef.current  = null;
-        } else {
-          setCallStatus("active");
+          setFinalStatus(data.status);
+          if (data.duration && data.duration !== "0:00") setFinalDuration(data.duration);
+          stopTimer();
+          stopPolling();
+          return; // final state reached — no more requests
         }
+
+        // Edesy reports "initiated" until the recipient picks up, then "in-progress".
+        const stillDialling = data.provider === "edesy" && data.providerStatus === "initiated";
+        setCallStatus(stillDialling ? "connecting" : "active");
+        scheduleNext();
       } catch (err) {
+        if (cancelled) return;
+        consecutiveErrors += 1;
         console.warn("[voice] polling error:", err);
+        if (consecutiveErrors >= POLL_MAX_CONSECUTIVE_ERRORS) {
+          giveUp("Lost contact with the server. The call may still be running — open Call History for its latest status.");
+          return;
+        }
+        setPollWarning(err.message || "Couldn't refresh the call status.");
+        scheduleNext();
       }
     };
 
-    // First poll immediately, then every 4 seconds
+    // First poll immediately, then every POLL_INTERVAL_MS
     poll();
-    pollRef.current = setInterval(poll, 4000);
 
     return () => {
-      clearInterval(timerRef.current);
-      clearInterval(pollRef.current);
-      timerRef.current = null;
-      pollRef.current  = null;
+      cancelled = true;
+      stopTimer();
+      stopPolling();
     };
   }, [callId]);
 
-  // ---- end call ------------------------------------------------------------
+  // ---- leave / end call ----------------------------------------------------
+  // For Edesy calls there is no hang-up API: the backend leaves the call alone
+  // and it ends when the agent or the recipient hangs up. This still stops the
+  // polling here and takes you to the call's details page.
   const handleEndCall = async () => {
-    clearInterval(timerRef.current);
-    clearInterval(pollRef.current);
-    timerRef.current = null;
-    pollRef.current  = null;
-
-    setCallStatus("ended");
+    stopTimer();
+    stopPolling();
 
     try {
       await endCall(callId);
@@ -91,18 +147,26 @@ export default function LiveCall() {
     navigate(callId ? `/dashboard/calls/${callId}` : "/dashboard/calls");
   };
 
-  // ---- mute (UI only — Retell calls are on the recipient's phone) ----------
+  // ---- mute (UI only — the call is on the recipient's phone) ---------------
   const handleToggleMute = () => setMuted((m) => !m);
 
   // ---- derived UI state ----------------------------------------------------
-  const isLive = callStatus === "active" || callStatus === "connecting";
+  const isLive = !gaveUp && (callStatus === "active" || callStatus === "connecting");
 
-  const statusLabel =
-    callStatus === "connecting"
+  const statusLabel = gaveUp
+    ? "Status unknown"
+    : callStatus === "connecting"
       ? "Dialling…"
       : callStatus === "active"
         ? "Connected"
-        : "Ended";
+        : FINAL_LABELS[finalStatus] || "Ended";
+
+  const endedPlaceholder =
+    finalStatus === "Missed"
+      ? "The call wasn't answered."
+      : finalStatus === "Failed"
+        ? "The call failed and did not connect."
+        : "The call has ended. The transcript and summary appear in the call details once processing finishes.";
 
   // ---- render --------------------------------------------------------------
   return (
@@ -142,13 +206,23 @@ export default function LiveCall() {
 
           {/* TIMER */}
           <p className="mt-2 font-[family-name:var(--font-mono)] text-3xl font-semibold tracking-tight text-[var(--color-ink)]">
-            {formatDuration(seconds)}
+            {finalDuration || formatDuration(seconds)}
           </p>
 
-          {/* CONNECTING HINT */}
-          {callStatus === "connecting" && (
+          {/* HINTS */}
+          {callStatus === "connecting" && !gaveUp && (
             <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
               Your voice provider is dialling the recipient's phone…
+            </p>
+          )}
+          {isLive && (
+            <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+              You can leave this screen — the call keeps going and appears in Call History.
+            </p>
+          )}
+          {pollWarning && (
+            <p className="mt-3 rounded-lg bg-[var(--color-gold-dim)] px-3 py-2 text-xs text-[var(--color-gold-ink)]">
+              {pollWarning}
             </p>
           )}
 
@@ -186,9 +260,12 @@ export default function LiveCall() {
                 : [
                     {
                       speaker: "ai",
-                      text: callStatus === "connecting"
-                        ? "Your voice provider is connecting the call — transcript will appear here once the call is answered."
-                        : "Call in progress — transcript will appear here.",
+                      text:
+                        callStatus === "connecting"
+                          ? "Your voice provider is connecting the call — transcript will appear here once the call is answered."
+                          : callStatus === "ended"
+                            ? endedPlaceholder
+                            : "Call in progress — transcript will appear here.",
                     },
                   ]
             }

@@ -181,6 +181,23 @@ export async function startCall(payload) {
   });
 }
 
+/**
+ * Start ONE real outbound call through Edesy (via our own backend — the Edesy
+ * API key never reaches the browser).
+ * @param {Object} payload
+ * @param {string} payload.phoneNumber   E.164 number, e.g. +919876543210
+ * @param {string} payload.customerName  Customer's name (sent to the agent as customer_name)
+ * @param {string} [payload.purpose]     Short label to find the call later
+ * @param {Object} [payload.variables]   Extra { name: value } variables for the agent prompt
+ * @returns {Promise<{success: boolean, conversationId: string, status: string, callId: string, dbId: string}>}
+ */
+export async function startEdesyCall({ phoneNumber, customerName, purpose, variables }) {
+  return request("/calls", {
+    method: "POST",
+    body: JSON.stringify({ phoneNumber, customerName, purpose, variables }),
+  });
+}
+
 export async function endCall(callId) {
   return request(`/call/${callId}/end`, { method: "POST" });
 }
