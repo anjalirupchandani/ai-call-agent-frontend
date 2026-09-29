@@ -19,11 +19,8 @@ export default function WorkflowNode({
   const status = node.data.status || "Draft";
   const outputs = meta.outputs || [];
 
-  // Every branching node (all of them except Start/End Call) shows the
-  // actual condition the user typed instead of a generic "Branch 1 /
-  // Branch 2" label — much easier to follow at a glance.
   function outputLabel(output) {
-    if (output.id === "out-a") return node.data.ifCondition?.trim() || "If…";
+    if (output.id === "out-a") return "If";
     if (output.id === "out-b") return "Otherwise";
     return output.label;
   }
@@ -106,6 +103,13 @@ export default function WorkflowNode({
                     reasoning as the input handle above. */}
                 <div
                   data-handle={output.id}
+                  title={
+                    output.id === "out-a"
+                      ? `Connect the If path: ${node.data.ifCondition || "caller confirms"}`
+                      : output.id === "out-b"
+                        ? `Connect the Otherwise path: ${node.data.otherwise || "other answers"}`
+                        : "Connect the next step"
+                  }
                   onMouseDown={(e) => onHandleMouseDown?.(e, node.id, output.id)}
                   className="flex h-6 w-6 -translate-x-1/2 cursor-crosshair items-center justify-center"
                 >

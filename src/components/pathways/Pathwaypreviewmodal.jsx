@@ -36,7 +36,7 @@ function edgePath(from, to) {
  * guaranteed to render at the right size on the very first paint — no
  * "measure after mount" timing to get wrong.
  */
-export default function PathwayPreviewModal({ nodes, edges, name, onClose }) {
+export default function PathwayPreviewModal({ nodes, edges, name, description, onClose }) {
   useEffect(() => {
     function onKeyDown(e) {
       if (e.key === "Escape") onClose();
@@ -65,7 +65,19 @@ export default function PathwayPreviewModal({ nodes, edges, name, onClose }) {
         if (!sourceNode || !targetNode) return null;
         const from = handlePosition(sourceNode, NODE_REGISTRY[sourceNode.type], edge.sourceHandle || "out");
         const to = handlePosition(targetNode, NODE_REGISTRY[targetNode.type], "in");
-        return { id: edge.id, d: edgePath(from, to) };
+        const label =
+          edge.sourceHandle === "out-a"
+            ? `If: ${sourceNode.data?.ifCondition || "condition is met"}`
+            : edge.sourceHandle === "out-b"
+              ? `Otherwise: ${sourceNode.data?.otherwise || "other answers"}`
+              : "";
+        return {
+          id: edge.id,
+          d: edgePath(from, to),
+          label,
+          labelX: (from.x + to.x) / 2,
+          labelY: (from.y + to.y) / 2,
+        };
       })
       .filter(Boolean);
 
@@ -74,21 +86,21 @@ export default function PathwayPreviewModal({ nodes, edges, name, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-surface shadow-(--shadow-pop)">
+      <div className="flex h-[94vh] w-full max-w-[1600px] flex-col overflow-hidden rounded-2xl bg-surface shadow-(--shadow-pop)">
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-ink">
               {name || "Pathway"} — Preview
             </h2>
             <p className="text-xs text-ink-muted">
-              {nodes.length} node{nodes.length === 1 ? "" : "s"} · {edges.length} connection
-              {edges.length === 1 ? "" : "s"}
+              {nodes.length} steps · {edges.length} connections
             </p>
+            {description && <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-soft">{description}</p>}
           </div>
           <button
             type="button"
@@ -117,9 +129,26 @@ export default function PathwayPreviewModal({ nodes, edges, name, onClose }) {
                   d={edge.d}
                   fill="none"
                   stroke="#5B4FE9"
-                  strokeWidth={2.5}
+                  strokeWidth={3}
                   strokeLinecap="round"
                 />
+              ))}
+
+              {view.edgeLines.filter((edge) => edge.label).map((edge) => (
+                <foreignObject
+                  key={`${edge.id}-label`}
+                  x={edge.labelX - 100}
+                  y={edge.labelY - 14}
+                  width={200}
+                  height={30}
+                >
+                  <div
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    className="truncate rounded-full border border-border bg-surface px-2.5 py-1 text-center text-[11px] font-semibold text-ink shadow-(--shadow-card)"
+                  >
+                    {edge.label}
+                  </div>
+                </foreignObject>
               ))}
 
               {nodes.map((node) => {

@@ -191,10 +191,13 @@ export async function startCall(payload) {
  * @param {Object} [payload.variables]   Extra { name: value } variables for the agent prompt
  * @returns {Promise<{success: boolean, conversationId: string, status: string, callId: string, dbId: string}>}
  */
-export async function startEdesyCall({ phoneNumber, customerName, purpose, variables }) {
+export async function startEdesyCall({ phoneNumber, customerName, purpose, variables, pathwayId }) {
+  const body = { phoneNumber, customerName, purpose, variables };
+  if (pathwayId) body.pathwayId = pathwayId;
+
   return request("/calls", {
     method: "POST",
-    body: JSON.stringify({ phoneNumber, customerName, purpose, variables }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -315,17 +318,21 @@ export async function getPathwayById(id) {
   return request(`/pathways/${id}`);
 }
 
-export async function createPathway({ name, nodes, edges, cognidomAgentId }) {
+export async function createPathway({ name, nodes, edges, status }) {
+  const body = { name, nodes, edges };
+  if (status) body.status = status;
   return request("/pathways", {
     method: "POST",
-    body: JSON.stringify({ name, nodes, edges, cognidomAgentId }),
+    body: JSON.stringify(body),
   });
 }
 
-export async function updatePathway(id, { name, nodes, edges, cognidomAgentId }) {
+export async function updatePathway(id, { name, nodes, edges, status }) {
+  const body = { name, nodes, edges };
+  if (status) body.status = status;
   return request(`/pathways/${id}`, {
     method: "PUT",
-    body: JSON.stringify({ name, nodes, edges, cognidomAgentId }),
+    body: JSON.stringify(body),
   });
 }
 

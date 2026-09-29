@@ -13,28 +13,35 @@ const DEFAULT_NODES = [
     id: "start-1",
     type: "start",
     position: { x: 120, y: 40 },
-    data: { ...NODE_REGISTRY.start.defaultData },
+    data: {
+      ...NODE_REGISTRY.start.defaultData,
+      description: "Hi, this is Riley calling to confirm your appointment for Thursday at 2 PM. Does that still work for you?",
+    },
   },
   {
     id: "route-1",
     type: "route",
     position: { x: 120, y: 240 },
-    data: { ...NODE_REGISTRY.route.defaultData },
+    data: {
+      ...NODE_REGISTRY.route.defaultData,
+      ifCondition: "Caller confirms the appointment still works",
+      otherwise: "Caller needs a different time",
+    },
   },
   {
     id: "greeting-1",
     type: "default",
     position: { x: -140, y: 460 },
     data: {
-      name: "Greeting",
-      description: "Thanks for confirming — let me pull up your account details.",
+      name: "Confirm appointment",
+      description: "Thank them and repeat the appointment details so they know it is confirmed.",
       status: "Active",
     },
   },
   {
     id: "endcall-1",
     type: "endCall",
-    position: { x: -140, y: 660 },
+    position: { x: 120, y: 660 },
     data: { ...NODE_REGISTRY.endCall.defaultData },
   },
   {
@@ -42,8 +49,8 @@ const DEFAULT_NODES = [
     type: "default",
     position: { x: 340, y: 460 },
     data: {
-      name: "New Conversation",
-      description: "Ask an open-ended question to find out what the caller needs.",
+      name: "Offer to rebook",
+      description: "Ask what time works better and explain the next step to reschedule.",
       status: "Draft",
     },
   },
@@ -52,14 +59,26 @@ const DEFAULT_NODES = [
 const DEFAULT_EDGES = [
   { id: "edge-start-route", source: "start-1", sourceHandle: "out", target: "route-1" },
   { id: "edge-route-greeting", source: "route-1", sourceHandle: "out-a", target: "greeting-1" },
-  { id: "edge-greeting-endcall", source: "greeting-1", sourceHandle: "out-a", target: "endcall-1" },
+  { id: "edge-greeting-endcall", source: "greeting-1", sourceHandle: "out", target: "endcall-1" },
   { id: "edge-route-newconvo", source: "route-1", sourceHandle: "out-b", target: "newconvo-1" },
+  { id: "edge-newconvo-endcall", source: "newconvo-1", sourceHandle: "out", target: "endcall-1" },
 ];
+
+const DEMO_POSITIONS = {
+  "start-1": { x: 450, y: 20 },
+  "route-1": { x: 450, y: 150 },
+  "greeting-1": { x: 20, y: 300 },
+  "newconvo-1": { x: 880, y: 300 },
+  "endcall-1": { x: 450, y: 450 },
+};
+const DEMO_NODES = DEFAULT_NODES.map((node) => ({
+  ...node,
+  position: DEMO_POSITIONS[node.id],
+}));
 
 export default function Pathways() {
   const [pathwayId, setPathwayId] = useState(null);
-  const [pathwayName, setPathwayName] = useState("agent");
-  const [cognidomAgentId, setCognidomAgentId] = useState("");
+  const [pathwayName, setPathwayName] = useState("Appointment confirmation");
   const [nodes, setNodes] = useState(DEFAULT_NODES);
   const [edges, setEdges] = useState(DEFAULT_EDGES);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -67,6 +86,7 @@ export default function Pathways() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -81,8 +101,7 @@ export default function Pathways() {
         if (!cancelled && pathways?.length) {
           const latest = pathways[0];
           setPathwayId(latest._id);
-          setPathwayName(latest.name || "agent");
-          setCognidomAgentId(latest.cognidomAgentId || "");
+          setPathwayName(latest.name || "Appointment confirmation");
           setNodes(latest.nodes?.length ? latest.nodes : DEFAULT_NODES);
           setEdges(latest.edges?.length ? latest.edges : DEFAULT_EDGES);
         }
@@ -131,12 +150,16 @@ export default function Pathways() {
     );
   }
 
-  async function persist() {
-    const payload = { name: pathwayName, nodes, edges, cognidomAgentId };
+  // Persist the pathway. `status` is optional — omit it for a normal save
+  // (keeps whatever is already stored) and pass "deployed" for Deploy.
+  async function persist(status) {
+    const payload = { name: pathwayName, nodes, edges };
+    if (status) payload.status = status;
+
     if (pathwayId) {
       return updatePathway(pathwayId, payload);
     }
-    
+
     const created = await createPathway(payload);
     setPathwayId(created._id);
     return created;
@@ -156,14 +179,12 @@ export default function Pathways() {
   }
 
   async function handleDeploy() {
-    if (!cognidomAgentId.trim()) {
-      setToast("Add a Cognidom Agent ID before deploying — calls can't use this pathway without one");
-      setTimeout(() => setToast(null), 3200);
-      return;
-    }
     try {
-      await persist();
-      setToast("Pathway deployed to Staging");
+      await persist("deployed");
+      setSavedAt(
+        new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+      );
+      setToast("Pathway deployed");
     } catch (err) {
       console.error("Failed to deploy pathway:", err);
       setToast("Deploy failed — check your connection and try again");
@@ -182,10 +203,9 @@ export default function Pathways() {
           onSave={handleSaveFlow}
           onDeploy={handleDeploy}
           onPreview={() => setShowPreview(true)}
+          onDemo={() => setShowDemo(true)}
           name={pathwayName}
           onNameChange={setPathwayName}
-          cognidomAgentId={cognidomAgentId}
-          onCognidomAgentIdChange={setCognidomAgentId}
         />
 
         <div className="flex min-h-0 flex-1">
@@ -228,6 +248,16 @@ export default function Pathways() {
             edges={edges}
             name={pathwayName}
             onClose={() => setShowPreview(false)}
+          />
+        )}
+
+        {showDemo && (
+          <PathwayPreviewModal
+            nodes={DEMO_NODES}
+            edges={DEFAULT_EDGES}
+            name="Appointment confirmation demo"
+            description="IF the caller confirms the time, the agent confirms the appointment. OTHERWISE, the agent offers to rebook. Follow the labeled branches to see where each answer goes."
+            onClose={() => setShowDemo(false)}
           />
         )}
       </div>

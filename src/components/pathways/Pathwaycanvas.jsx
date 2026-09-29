@@ -258,7 +258,19 @@ export default function PathwayCanvas({
         const targetMeta = NODE_REGISTRY[targetNode.type];
         const from = handlePosition(sourceNode, sourceMeta, edge.sourceHandle || "out");
         const to = handlePosition(targetNode, targetMeta, "in");
-        return { id: edge.id, d: edgePath(from, to), midX: (from.x + to.x) / 2, midY: (from.y + to.y) / 2 };
+        const label =
+          edge.sourceHandle === "out-a"
+            ? `If: ${sourceNode.data?.ifCondition || "condition is met"}`
+            : edge.sourceHandle === "out-b"
+              ? `Otherwise: ${sourceNode.data?.otherwise || "other answers"}`
+              : "";
+        return {
+          id: edge.id,
+          d: edgePath(from, to),
+          midX: (from.x + to.x) / 2,
+          midY: (from.y + to.y) / 2,
+          label,
+        };
       })
       .filter(Boolean);
   }, [nodes, edges]);
@@ -364,6 +376,22 @@ export default function PathwayCanvas({
                     strokeWidth={isSelected ? 3 : 2}
                     strokeLinecap="round"
                   />
+                  {edge.label && (
+                    <foreignObject
+                      x={edge.midX - 100}
+                      y={edge.midY - 15}
+                      width={200}
+                      height={30}
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <div
+                        xmlns="http://www.w3.org/1999/xhtml"
+                        className="truncate rounded-full border border-border bg-surface px-2.5 py-1 text-center text-[11px] font-semibold text-ink shadow-(--shadow-card)"
+                      >
+                        {edge.label}
+                      </div>
+                    </foreignObject>
+                  )}
                   {isSelected && (
                     <g
                       transform={`translate(${edge.midX}, ${edge.midY})`}

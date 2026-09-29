@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, Save, Rocket, Check } from "lucide-react";
+import { ArrowLeft, Eye, Play, Save, Rocket, Check } from "lucide-react";
 
 export default function PathwayToolbar({
   savedAt,
   onSave,
   onDeploy,
   onPreview,
+  onDemo,
   name,
   onNameChange,
-  cognidomAgentId,
-  onCognidomAgentIdChange,
 }) {
   const navigate = useNavigate();
   const [justSaved, setJustSaved] = useState(false);
@@ -40,20 +39,20 @@ export default function PathwayToolbar({
           className="w-36 shrink-0 rounded-lg border border-border bg-canvas px-2.5 py-1.5 text-sm font-medium text-ink focus:border-accent focus:outline-none"
         />
 
-        <input
-          value={cognidomAgentId}
-          onChange={(e) => onCognidomAgentIdChange(e.target.value)}
-          placeholder="Cognidom Agent ID"
-          title="The Cognidom agent (configured on v2.cognidom.com) whose script matches this pathway. Calls started with this pathway are routed to this agent."
-          className="hidden w-48 shrink-0 rounded-lg border border-dashed border-border bg-canvas px-2.5 py-1.5 font-mono text-xs text-ink-soft focus:border-accent focus:outline-none sm:block"
-        />
-
         {savedAt && !justSaved && (
           <span className="hidden shrink-0 text-xs text-ink-muted lg:inline">Saved {savedAt}</span>
         )}
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onDemo}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-ink-soft hover:bg-surface-sunk"
+        >
+          <Play size={13} />
+          Demo
+        </button>
         <button
           type="button"
           onClick={onPreview}

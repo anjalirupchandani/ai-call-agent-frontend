@@ -1,13 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PhoneCall, Loader2, Plus, X } from "lucide-react";
 import DashboardShell from "../components/DashboardShell";
-import { startEdesyCall } from "../services/api";
+import { startEdesyCall, getPathways } from "../services/api";
 
 const initialForm = {
   phone: "",
   contactName: "",
   purpose: "",
+  pathwayId: "",
 };
 
 function Field({ label, children, hint }) {
@@ -45,7 +46,25 @@ export default function StartCall() {
   const [vars, setVars]             = useState([]); // optional extra variables: [{ key, value }]
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState("");
+  const [pathways, setPathways]     = useState([]); // deployed pathways only
   const navigate                    = useNavigate();
+
+  // Only deployed pathways can be used on a call.
+  useEffect(() => {
+    let cancelled = false;
+    getPathways()
+      .then((list) => {
+        if (!cancelled) {
+          setPathways((Array.isArray(list) ? list : []).filter((p) => p.status === "deployed"));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPathways([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // A ref (not state) so a fast double-click can never slip a second request
   // through before React re-renders the disabled button. Every call costs credits.
@@ -96,6 +115,7 @@ export default function StartCall() {
         customerName: form.contactName.trim(),
         purpose: form.purpose.trim(),
         variables,
+        pathwayId: form.pathwayId || undefined,
       });
       const callId = result.conversationId || result.callId;
       // Lock stays on: we are leaving this page, so no second click can get through.
@@ -164,6 +184,30 @@ export default function StartCall() {
               />
             </Field>
           </div>
+
+          {/* Pathway: the flowchart the agent will follow */}
+          <Field
+            label="Pathway (optional)"
+            hint={
+              pathways.length === 0
+                ? "No deployed pathways yet. Build one in Pathways and click Deploy."
+                : "The agent follows this flowchart on the call. Leave empty to use the agent's own prompt in Edesy."
+            }
+          >
+            <select
+              value={form.pathwayId}
+              onChange={update("pathwayId")}
+              disabled={submitting}
+              className={inputClasses}
+            >
+              <option value="">No pathway (agent's own prompt)</option>
+              {pathways.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           {/* Optional variables */}
           <div className="flex flex-col gap-2.5">

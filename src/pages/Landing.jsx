@@ -27,11 +27,11 @@ const PATHWAYS = [
     id: "appointments",
     label: "Appointments",
     title: "Confirm every appointment",
-    description: "Reach out at the right time, confirm attendance, and offer a new slot when plans change.",
+    description: "Your pathway tells the agent what to say, what answer to listen for, and what to do next.",
     steps: [
-      { icon: PhoneCall, title: "Start the call", detail: "Riley calls 24 hours before the appointment." },
-      { icon: MessageSquare, title: "Ask for confirmation", detail: "The agent checks whether the scheduled time still works." },
-      { icon: CircleCheck, title: "Confirm or rebook", detail: "The call is resolved with an updated status and next step." },
+      { icon: PhoneCall, title: "Start with your instructions", detail: "The agent introduces the call and asks whether the appointment time still works." },
+      { icon: MessageSquare, title: "If they confirm", detail: "Follow the If branch to confirm the appointment." },
+      { icon: CircleCheck, title: "Otherwise, rebook", detail: "If they need a different time, follow Otherwise and offer to reschedule." },
     ],
     metric: "92%",
     metricLabel: "confirmed in one call",
@@ -150,10 +150,10 @@ export default function Landing() {
               Dynamic pathways
             </span>
             <h2 className="mt-5 max-w-lg font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-5xl">
-              Build calls that adapt to every answer.
+              Give your agent a clear guide for every call.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--color-ink-muted)]">
-              Map the next best action for each conversation. Your agent follows the pathway while keeping every exchange natural.
+              Write what the agent should say or ask, then show it what to do for different answers. On a call, the agent follows those instructions while responding naturally.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Pathway examples">
@@ -182,7 +182,7 @@ export default function Landing() {
               to="/dashboard/pathways"
               className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-accent)] transition-colors hover:text-[var(--color-accent-hover)]"
             >
-              Build your own pathway
+              Create a pathway
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -192,7 +192,7 @@ export default function Landing() {
               <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-soft)] pb-5">
                 <div>
                   <p className="font-[family-name:var(--font-mono)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">
-                    Active pathway
+                    How the agent follows it
                   </p>
                   <h3 className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold text-[var(--color-ink)]">
                     {activePathway.title}

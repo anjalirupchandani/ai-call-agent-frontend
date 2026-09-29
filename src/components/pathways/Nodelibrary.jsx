@@ -18,8 +18,8 @@ export default function NodeLibrary() {
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="border-b border-[var(--color-border-soft)] px-4 py-3.5">
-        <p className="text-sm font-semibold text-[var(--color-ink)]">Node Library</p>
-        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">Drag a node onto the canvas</p>
+        <p className="text-sm font-semibold text-[var(--color-ink)]">Add a call step</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-ink-muted)]">Drag a step onto the canvas, then connect its If and Otherwise paths.</p>
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] px-2.5 py-1.5">
           <Search size={14} className="text-[var(--color-ink-muted)]" />
           <input

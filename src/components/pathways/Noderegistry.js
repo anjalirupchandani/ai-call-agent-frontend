@@ -24,12 +24,6 @@ import { DefaultNodeMeta } from "./nodes/DefaultNode";
 export const NODE_WIDTH = 232;
 export const NODE_HEIGHT = 104;
 
-// Every branching-capable node shares this same pair of output handles.
-// "out-a" carries whatever condition the user types into the node's "If"
-// field (see NodeConfigPanel); "out-b" is the automatic "Otherwise" catch-
-// all. WorkflowNode reads the live condition text off the node itself, so
-// the labels below are just a structural fallback and are never shown
-// verbatim on the canvas.
 const BRANCHING_OUTPUTS = [
   { id: "out-a", label: "If" },
   { id: "out-b", label: "Otherwise" },
@@ -41,19 +35,14 @@ const BRANCHING_OUTPUTS = [
  * default data it's created with, whether it terminates a branch, and how
  * many output handles it exposes.
  *
- * outputs: [] means terminal (no output handle)
- * outputs: [{ id, label }] — one entry per output handle, positioned evenly
- * along the bottom edge of the node. Every node that can lead somewhere
- * next uses BRANCHING_OUTPUTS so it can conditionally branch, not just the
- * dedicated Route node.
+ * outputs: [] means terminal. Every other step can continue or branch on the caller's answer.
  */
 export const NODE_REGISTRY = {
   start: {
     ...StartNodeMeta,
     icon: Play,
     hasInput: false,
-    // The call always begins the same way, so Start stays a single path —
-    // it's the only node without an If/Otherwise pair.
+    // The call always begins with one greeting, so Start has one connection.
     outputs: [{ id: "out", label: "" }],
     inLibrary: false,
   },
@@ -183,11 +172,7 @@ export const NODE_REGISTRY = {
     icon: Route,
     hasInput: true,
     outputs: BRANCHING_OUTPUTS,
-    // Flow control section removed from the library — every node now
-    // branches on its own (see NodeConfigPanel's "If/Otherwise"), so a
-    // separate dedicated Route node is no longer offered here. Kept in the
-    // registry so the one already on the default canvas keeps working.
-    inLibrary: false,
+    inLibrary: true,
     category: "Flow control",
   },
   sms: {
