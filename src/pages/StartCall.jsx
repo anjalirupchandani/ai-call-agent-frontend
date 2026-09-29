@@ -271,7 +271,7 @@ export default function StartCall() {
               {submitting
                 ? <Loader2 size={16} className="animate-spin" />
                 : <PhoneCall size={16} />}
-              {submitting ? "Starting call…" : "Start Call"}
+              {submitting ? (form.pathwayId ? "Preparing AI agent…" : "Starting call…") : "Start Call"}
             </button>
             <button
               type="button"
