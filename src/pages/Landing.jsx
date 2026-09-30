@@ -258,6 +258,41 @@ export default function Landing() {
           ))}
         </div>
       </section>
+
+      <footer id="site-footer" className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-12">
+        <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div>
+            <Link to="/" className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--color-ink)]">
+              AI Call Agent
+            </Link>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--color-ink-muted)]">
+              Give your business a voice that never sleeps.
+            </p>
+          </div>
+
+          <nav aria-label="Explore" className="flex flex-col items-start gap-3">
+            <h2 className="text-sm font-semibold text-[var(--color-ink)]">Explore</h2>
+            <a href="#how-it-works" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">How it works</a>
+            <a href="#product" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Product</a>
+            <Link to="/demo" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Watch demo</Link>
+          </nav>
+
+          <nav aria-label="Platform" className="flex flex-col items-start gap-3">
+            <h2 className="text-sm font-semibold text-[var(--color-ink)]">Platform</h2>
+            <Link to="/dashboard" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Dashboard</Link>
+            <Link to="/dashboard/pathways" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Pathways</Link>
+          </nav>
+
+          <nav aria-label="Account" className="flex flex-col items-start gap-3">
+            <h2 className="text-sm font-semibold text-[var(--color-ink)]">Account</h2>
+            <Link to="/login" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Sign in</Link>
+            <Link to="/signup" className="text-sm text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]">Create account</Link>
+          </nav>
+        </div>
+        <div className="mx-auto mt-10 max-w-6xl border-t border-[var(--color-border-soft)] pt-5 text-xs text-[var(--color-ink-muted)]">
+          © {new Date().getFullYear()} AI Call Agent
+        </div>
+      </footer>
     </div>
   );
 }
