@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PhoneCall, CheckCircle2, Clock, TrendingUp, PhoneOutgoing, UserPlus, FileText, History, BarChart3, ArrowRight } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import DashboardShell from "../components/DashboardShell";
 import StatCard from "../components/StatCard";
 import CallCard from "../components/CallCard";
@@ -32,7 +32,7 @@ function CustomTooltip({ active, payload, label }) {
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs shadow-[var(--shadow-card)]">
       <p className="mb-1 font-medium text-[var(--color-ink)]">{label}</p>
       {payload.map((entry) => (
-        <p key={entry.dataKey} style={{ color: entry.color }}>{entry.name}: {entry.value}</p>
+        <p key={entry.dataKey} style={{ color: SERIES.find((series) => series.key === entry.dataKey)?.color }}>{entry.name}: {entry.value}</p>
       ))}
     </div>
   );
@@ -60,6 +60,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState("7d");
   const periodLabel = useMemo(() => PERIODS.find((option) => option.value === period)?.label || "7 Days", [period]);
   const hasCallData = overview.some((day) => (day.completed || 0) + (day.missed || 0) + (day.failed || 0) > 0);
+  const periodTotal = overview.reduce((total, day) => total + (day.completed || 0) + (day.missed || 0) + (day.failed || 0), 0);
 
   useEffect(() => {
     setLoading(true);
@@ -100,37 +101,40 @@ export default function Dashboard() {
           <div className="h-px bg-[var(--color-border-soft)]" />
 
           <div className="grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] xl:col-span-2">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] xl:col-span-2">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--color-border-soft)] px-6 pb-5 pt-6">
                 <div>
-                  <h2 className="font-[family-name:var(--font-display)] text-base font-semibold text-[var(--color-ink)]">Calls Overview</h2>
-                  <p className="text-xs text-[var(--color-ink-muted)]">{periodLabel} · Completed, missed, and failed calls</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-muted)]">{periodLabel} activity</p>
+                  <div className="mt-1 flex items-baseline gap-2.5">
+                    <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--color-ink)]">{periodTotal.toLocaleString()}</h2>
+                    <span className="text-sm text-[var(--color-ink-muted)]">total calls</span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 pb-1">
                   {SERIES.map((series) => (
-                    <span key={series.key} className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--color-ink-muted)]"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />{series.label}</span>
+                    <span key={series.key} className="flex items-center gap-2 text-xs font-medium text-[var(--color-ink-soft)]"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: series.color }} />{series.label}</span>
                   ))}
                 </div>
               </div>
               {hasCallData ? (
-                <div className="h-64">
+                <div className="h-72 px-4 pb-4 pt-5 sm:px-6">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={overview} margin={{ left: 0, right: 10, top: 10 }}>
+                    <BarChart data={overview} margin={{ left: 0, right: 8, top: 8, bottom: 0 }} barCategoryGap="32%">
                       <defs>
                         {SERIES.map((series) => (
-                          <linearGradient key={series.gradient} id={series.gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={series.color} stopOpacity={0.22} /><stop offset="100%" stopColor={series.color} stopOpacity={0} /></linearGradient>
+                          <linearGradient key={series.gradient} id={series.gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={series.color} stopOpacity={0.95} /><stop offset="100%" stopColor={series.color} stopOpacity={0.62} /></linearGradient>
                         ))}
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-soft)" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fontSize: 12, fill: "var(--color-ink-muted)" }} axisLine={false} tickLine={false} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "var(--color-ink-muted)" }} axisLine={false} tickLine={false} width={30} />
-                      <Tooltip content={<CustomTooltip />} />
-                      {SERIES.map((series) => <Area key={series.key} type="monotone" dataKey={series.key} name={series.label} stroke={series.color} strokeWidth={2} fill={`url(#${series.gradient})`} />)}
-                    </AreaChart>
+                      <CartesianGrid strokeDasharray="3 5" stroke="var(--color-border-soft)" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fontSize: 12, fill: "var(--color-ink-muted)" }} axisLine={false} tickLine={false} tickMargin={12} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--color-ink-muted)" }} axisLine={false} tickLine={false} tickMargin={8} width={30} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-accent-dim)", opacity: 0.45, radius: 8 }} />
+                      {SERIES.map((series) => <Bar key={series.key} dataKey={series.key} name={series.label} stackId="calls" fill={`url(#${series.gradient})`} radius={[5, 5, 0, 0]} maxBarSize={36} />)}
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="flex h-64 flex-col items-center justify-center rounded-xl bg-[var(--color-surface-sunk)] px-6 text-center">
+                <div className="mx-6 mb-6 flex h-64 flex-col items-center justify-center rounded-2xl bg-[var(--color-surface-sunk)] px-6 text-center">
                   <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-accent-dim)] text-[var(--color-accent)]"><BarChart3 size={19} /></span>
                   <p className="max-w-xs text-sm font-medium text-[var(--color-ink)]">No call data yet — start your first call to see trends here.</p>
                   <Link to="/dashboard/calls/new" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-accent-hover)]">Start New Call <ArrowRight size={13} /></Link>
