@@ -20,11 +20,13 @@ import {
   cancelScheduledCall,
   deleteScheduledCall,
   getContacts,
+  getPathways,
 } from "../services/api";
 
 const STATUS_META = {
   pending: { label: "Pending", color: "text-amber-600 bg-amber-50", icon: Clock },
-  completed: { label: "Completed", color: "text-emerald-600 bg-emerald-50", icon: CheckCircle2 },
+  calling: { label: "Calling now", color: "text-blue-600 bg-blue-50", icon: Clock },
+  completed: { label: "Called", color: "text-emerald-600 bg-emerald-50", icon: CheckCircle2 },
   failed: { label: "Failed", color: "text-red-600 bg-red-50", icon: XCircle },
   cancelled: { label: "Cancelled", color: "text-gray-500 bg-gray-100", icon: Ban },
 };
@@ -90,6 +92,7 @@ function periodLabel(view, cursor) {
 
 function eventTone(status) {
   if (status === "completed") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (status === "calling") return "border-blue-200 bg-blue-50 text-blue-800";
   if (status === "failed") return "border-red-200 bg-red-50 text-red-800";
   if (status === "cancelled") return "border-gray-200 bg-gray-100 text-gray-600";
   return "border-[var(--color-accent)]/20 bg-[var(--color-accent-dim)] text-[var(--color-accent-ink)]";
@@ -100,7 +103,7 @@ function CalendarEvent({ item, compact = false, onCancel, onDelete }) {
   return (
     <div
       className={`group relative rounded-lg border px-2 py-1.5 ${eventTone(item.status)} ${compact ? "text-[11px]" : "text-xs"}`}
-      title={`${item.name || item.phoneNumber} · ${formatTime(item.scheduledAt)}`}
+      title={`${item.name || item.phoneNumber} · ${formatTime(item.scheduledAt)}${item.pathwayName ? ` · Pathway: ${item.pathwayName}` : ""}${item.status === "failed" && item.errorMessage ? ` · ${item.errorMessage}` : ""}`}
     >
       <p className="truncate font-semibold">{item.name || item.phoneNumber}</p>
       <p className="truncate opacity-70">{formatTime(item.scheduledAt)}</p>
@@ -278,9 +281,10 @@ function CalendarView({ view, cursor, items, onCancel, onDelete, onSelectMonth }
 }
 
 
-function ScheduleModal({ onClose, onSave, contacts }) {
+function ScheduleModal({ onClose, onSave, contacts, pathways = [] }) {
   const [form, setForm] = useState({
     contactId: "",
+    pathwayId: "",
     phoneNumber: "",
     name: "",
     date: "",
@@ -316,6 +320,7 @@ function ScheduleModal({ onClose, onSave, contacts }) {
 
       await onSave({
         contactId: form.contactId || undefined,
+        pathwayId: form.pathwayId || undefined,
         phoneNumber: form.phoneNumber.trim(),
         name: form.name.trim(),
         scheduledAt: scheduledAt.toISOString(),
@@ -329,7 +334,9 @@ function ScheduleModal({ onClose, onSave, contacts }) {
     }
   };
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Local date (toISOString() would give the UTC date, which can be yesterday).
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   return (
     <div
@@ -433,6 +440,27 @@ function ScheduleModal({ onClose, onSave, contacts }) {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-ink)]">
+              Pathway (optional)
+            </label>
+            <select
+              value={form.pathwayId}
+              onChange={(e) => setForm((prev) => ({ ...prev, pathwayId: e.target.value }))}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] px-3.5 py-2.5 text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-dim)]"
+            >
+              <option value="">No pathway (agent's own prompt)</option>
+              {pathways.map((p) => (
+                <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+              {pathways.length === 0
+                ? "No deployed pathways yet. Build one in Pathways and click Deploy."
+                : "The agent will follow this flow when it calls. Knowledge Base answers work automatically."}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-ink)]">
               Notes
             </label>
             <textarea
@@ -467,6 +495,7 @@ function ScheduleModal({ onClose, onSave, contacts }) {
 export default function Callsceduling() {
   const [items, setItems] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [pathways, setPathways] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -480,16 +509,36 @@ export default function Callsceduling() {
     loadAll();
   }, []);
 
+  // Quietly refresh every 30s so Pending → Calling → Called/Failed shows up.
+  // This only reads from YOUR backend (no Edesy calls, no credits).
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      try {
+        const scheduled = await getScheduledCalls();
+        setItems((scheduled || []).map(withId));
+      } catch {
+        /* keep the last known list */
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   const loadAll = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [scheduled, contactList] = await Promise.all([
+      const [scheduled, contactList, pathwayList] = await Promise.all([
         getScheduledCalls(),
         getContacts().catch(() => []),
+        getPathways().catch(() => []),
       ]);
       setItems((scheduled || []).map(withId));
       setContacts((contactList || []).map(withId));
+      setPathways(
+        (Array.isArray(pathwayList) ? pathwayList : [])
+          .filter((p) => p.status === "deployed")
+          .map(withId)
+      );
     } catch (err) {
       setError(err.message || "Failed to load scheduled calls");
     } finally {
@@ -635,7 +684,7 @@ export default function Callsceduling() {
             <option value="all">All statuses</option>
             {Object.entries(STATUS_META).map(([key, meta]) => <option key={key} value={key}>{meta.label}</option>)}
           </select>
-        </div>
+           </div>
         <span className="text-sm text-[var(--color-ink-muted)]">{filtered.length} {filtered.length === 1 ? "appointment" : "appointments"}</span>
       </div>
 
@@ -656,7 +705,7 @@ export default function Callsceduling() {
         )}
       </div>
 
-      {showModal && <ScheduleModal onClose={() => setShowModal(false)} onSave={handleCreate} contacts={contacts} />}
+      {showModal && <ScheduleModal onClose={() => setShowModal(false)} onSave={handleCreate} contacts={contacts} pathways={pathways} />}
     </DashboardShell>
   );
 }

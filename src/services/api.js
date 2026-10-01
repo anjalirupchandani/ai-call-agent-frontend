@@ -174,6 +174,17 @@ export async function createContact(payload) {
   });
 }
 
+export async function updateContact(id, payload) {
+  return request(`/contacts/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteContact(id) {
+  return request(`/contacts/${id}`, { method: "DELETE" });
+}
+
 export async function startCall(payload) {
   return request("/call/start", {
     method: "POST",

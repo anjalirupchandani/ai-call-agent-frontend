@@ -3,16 +3,30 @@ import { useNavigate } from "react-router-dom";
 import { Search, UserPlus, X } from "lucide-react";
 import DashboardShell from "../components/DashboardShell";
 import ContactCard from "../components/ContactCard";
-import { getContacts, createContact } from "../services/api";
+import { getContacts, createContact, updateContact, deleteContact } from "../services/api";
 
-function AddContactModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", tag: "Lead" });
+function ContactModal({ contact, onClose, onSave }) {
+  const [form, setForm] = useState(() => ({
+    name: contact?.name || "",
+    phone: contact?.phone || "",
+    email: contact?.email === "—" ? "" : contact?.email || "",
+    tag: contact?.tag || "Lead",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
-    const created = await createContact(form);
-    onCreate(created);
-    onClose();
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(contact, form);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -20,9 +34,9 @@ function AddContactModal({ onClose, onCreate }) {
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-(--shadow-card)">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold text-ink">
-            Add Contact
+            {contact ? "Edit Contact" : "Add Contact"}
           </h2>
-          <button onClick={onClose} className="text-ink-muted hover:text-ink">
+          <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -56,12 +70,23 @@ function AddContactModal({ onClose, onCreate }) {
             <option>Customer</option>
             <option>VIP</option>
           </select>
-          <button
-            type="submit"
-            className="mt-1 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
-          >
-            Add Contact
-          </button>
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          <div className="mt-1 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-ink-muted hover:bg-canvas"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60"
+            >
+              {saving ? "Saving…" : contact ? "Save Changes" : "Add Contact"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -72,6 +97,9 @@ export default function Contacts() {
   const [contacts, setContacts] = useState([]);
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [editingContact, setEditingContact] = useState(null);
+  const [deletingContactId, setDeletingContactId] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -81,6 +109,37 @@ export default function Contacts() {
       setLoading(false);
     });
   }, []);
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingContact(null);
+  };
+
+  const removeContact = async (contact) => {
+    if (!window.confirm(`Delete ${contact.name}? This action cannot be undone.`)) return;
+
+    setDeletingContactId(contact._id);
+    setDeleteError("");
+    try {
+      await deleteContact(contact._id);
+      setContacts((prev) => prev.filter((item) => item._id !== contact._id));
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeletingContactId(null);
+    }
+  };
+
+  const saveContact = async (contact, form) => {
+    if (contact) {
+      const updated = await updateContact(contact._id, form);
+      setContacts((prev) => prev.map((item) => item._id === updated._id ? updated : item));
+      return;
+    }
+
+    const created = await createContact(form);
+    setContacts((prev) => [created, ...prev]);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -111,6 +170,10 @@ export default function Contacts() {
         </button>
       </div>
 
+      {deleteError && (
+        <p role="alert" className="mb-4 text-sm text-red-600">{deleteError}</p>
+      )}
+
       {loading ? (
         <div className="flex h-40 items-center justify-center text-sm text-ink-muted">
           Loading contacts…
@@ -122,6 +185,9 @@ export default function Contacts() {
               key={contact._id}
               contact={contact}
               onCall={() => navigate("/dashboard/calls/new")}
+              onEdit={setEditingContact}
+              onDelete={removeContact}
+              deleting={deletingContactId === contact._id}
             />
           ))}
           {filtered.length === 0 && (
@@ -132,10 +198,11 @@ export default function Contacts() {
         </div>
       )}
 
-      {showModal && (
-        <AddContactModal
-          onClose={() => setShowModal(false)}
-          onCreate={(c) => setContacts((prev) => [c, ...prev])}
+      {(showModal || editingContact) && (
+        <ContactModal
+          contact={editingContact}
+          onClose={closeModal}
+          onSave={saveContact}
         />
       )}
     </DashboardShell>

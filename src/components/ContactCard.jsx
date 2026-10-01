@@ -1,4 +1,4 @@
-import { Phone, MoreHorizontal } from "lucide-react";
+import { Phone, Pencil, Trash2 } from "lucide-react";
 
 const TAG_STYLES = {
   Lead: "bg-[var(--color-gold-dim)] text-[var(--color-gold-ink)]",
@@ -6,7 +6,7 @@ const TAG_STYLES = {
   VIP: "bg-[var(--color-accent-dim)] text-[var(--color-accent-ink)]",
 };
 
-export default function ContactCard({ contact, onCall }) {
+export default function ContactCard({ contact, onCall, onEdit, onDelete, deleting }) {
   const initials = contact.name
     .split(" ")
     .map((p) => p[0])
@@ -43,10 +43,20 @@ export default function ContactCard({ contact, onCall }) {
         </button>
         <button
           type="button"
+          onClick={() => onEdit?.(contact)}
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunk)]"
-          aria-label="More options"
+          aria-label={`Edit ${contact.name}`}
         >
-          <MoreHorizontal size={15} />
+          <Pencil size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete?.(contact)}
+          disabled={deleting}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-red-600 hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
+          aria-label={`Delete ${contact.name}`}
+        >
+          <Trash2 size={15} />
         </button>
       </div>
     </div>
