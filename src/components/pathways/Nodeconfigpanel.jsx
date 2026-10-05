@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { NODE_REGISTRY } from "./Noderegistry";
 import { getKnowledgeArticles } from "../../services/api";
 
@@ -27,21 +27,21 @@ const inputClass =
 //   knowledgeSourceId -> Knowledge source        (Knowledge Base only)
 const FIELDS_BY_TYPE = {
   start: ["name", "description"],
-  default: ["name", "description", "ifCondition", "otherwise"],
-  route: ["name", "description", "ifCondition", "otherwise"],
+  default: ["name", "description", "conditions", "otherwise"],
+  route: ["name", "description", "conditions", "otherwise"],
   endCall: [],
-  knowledgeBase: ["name", "description", "knowledgeSourceId", "ifCondition", "otherwise"],
-  transferCall: ["name", "transferNumber", "description", "ifCondition", "otherwise"],
+  knowledgeBase: ["name", "description", "knowledgeSourceId", "conditions", "otherwise"],
+  transferCall: ["name", "transferNumber", "description", "conditions", "otherwise"],
 
   // Pass-through node types: keep their existing name / instructions /
   // variables fields, scoped to these types only.
-  webhook: ["name", "description", "variables", "ifCondition", "otherwise"],
-  sms: ["name", "description", "variables", "ifCondition", "otherwise"],
-  waitForResponse: ["name", "description", "variables", "ifCondition", "otherwise"],
-  transferPathway: ["name", "description", "variables", "ifCondition", "otherwise"],
-  toolLibrary: ["name", "description", "variables", "ifCondition", "otherwise"],
-  pressButton: ["name", "description", "variables", "ifCondition", "otherwise"],
-  customCode: ["name", "description", "variables", "ifCondition", "otherwise"],
+  webhook: ["name", "description", "variables", "conditions", "otherwise"],
+  sms: ["name", "description", "variables", "conditions", "otherwise"],
+  waitForResponse: ["name", "description", "variables", "conditions", "otherwise"],
+  transferPathway: ["name", "description", "variables", "conditions", "otherwise"],
+  toolLibrary: ["name", "description", "variables", "conditions", "otherwise"],
+  pressButton: ["name", "description", "variables", "conditions", "otherwise"],
+  customCode: ["name", "description", "variables", "conditions", "otherwise"],
 };
 
 // Per-type wording for the Instructions textarea (still data.description).
@@ -60,7 +60,13 @@ function fieldsFor(type) {
 function buildForm(node) {
   const form = {};
   for (const key of fieldsFor(node.type)) {
-    form[key] = node.data?.[key] || "";
+    form[key] = key === "conditions"
+      ? Array.isArray(node.data?.conditions)
+        ? node.data.conditions
+        : node.data?.ifCondition
+          ? [{ id: "condition-1", value: node.data.ifCondition }]
+          : [{ id: "condition-1", value: "" }]
+      : node.data?.[key] || "";
   }
   return form;
 }
@@ -209,20 +215,43 @@ export default function NodeConfigPanel({ node, onClose, onSave, onDelete }) {
           </Field>
         )}
 
-        {/* Conditional paths */}
-        {has("ifCondition") && (
-          <Field
-            label="If the caller…"
-            hint="Describe when the agent should take this path. Connect the If output to the next step for this answer."
-          >
-            <textarea
-              className={`${inputClass} resize-none`}
-              rows={2}
-              value={form.ifCondition}
-              onChange={(e) => update("ifCondition", e.target.value)}
-              placeholder="e.g. caller asks for support"
-            />
-          </Field>
+        {has("conditions") && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-ink-soft">If the caller…</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">
+                Add a condition for each answer path, then connect its matching output to the next step.
+              </p>
+            </div>
+            {form.conditions.map((condition, index) => (
+              <div key={condition.id} className="flex gap-2">
+                <textarea
+                  className={`${inputClass} min-h-16 resize-none`}
+                  rows={2}
+                  value={condition.value}
+                  onChange={(e) => update("conditions", form.conditions.map((item) => item.id === condition.id ? { ...item, value: e.target.value } : item))}
+                  placeholder={`e.g. caller chooses option ${index + 1}`}
+                />
+                {form.conditions.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => update("conditions", form.conditions.filter((item) => item.id !== condition.id))}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-warn-ink hover:bg-warn-dim"
+                    aria-label={`Remove condition ${index + 1}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => update("conditions", [...form.conditions, { id: `condition-${Date.now()}`, value: "" }])}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-ink-soft hover:bg-surface-sunk"
+            >
+              <Plus size={14} /> Add condition
+            </button>
+          </div>
         )}
 
         {has("otherwise") && (

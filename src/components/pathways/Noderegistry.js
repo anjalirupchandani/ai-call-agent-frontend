@@ -207,6 +207,20 @@ export const NODE_REGISTRY = {
   },
 };
 
+export function getNodeOutputs(node) {
+  const conditions = Array.isArray(node?.data?.conditions) ? node.data.conditions : [];
+  if (conditions.length > 0) {
+    return [
+      ...conditions.map((condition, index) => ({
+        id: `condition-${condition.id}`,
+        label: `If ${index + 1}`,
+      })),
+      { id: "out-b", label: "Otherwise" },
+    ];
+  }
+  return NODE_REGISTRY[node?.type]?.outputs || [];
+}
+
 export const LIBRARY_NODE_TYPES = Object.entries(NODE_REGISTRY)
   .filter(([, meta]) => meta.inLibrary)
   .map(([type, meta]) => ({ type, ...meta }));

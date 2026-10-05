@@ -1,5 +1,7 @@
 import { NODE_WIDTH, NODE_HEIGHT } from "./Noderegistry";
 
+import { getNodeOutputs } from "./Noderegistry";
+
 const STATUS_STYLES = {
   Active: "bg-signal-dim text-signal-ink",
   Draft: "bg-gold-dim text-gold-ink",
@@ -17,7 +19,7 @@ export default function WorkflowNode({
 }) {
   const Icon = meta.icon;
   const status = node.data.status || "Draft";
-  const outputs = meta.outputs || [];
+  const outputs = getNodeOutputs(node);
 
   function outputLabel(output) {
     if (output.id === "out-a") return "If";
@@ -104,11 +106,13 @@ export default function WorkflowNode({
                 <div
                   data-handle={output.id}
                   title={
-                    output.id === "out-a"
-                      ? `Connect the If path: ${node.data.ifCondition || "caller confirms"}`
-                      : output.id === "out-b"
-                        ? `Connect the Otherwise path: ${node.data.otherwise || "other answers"}`
-                        : "Connect the next step"
+                    output.id.startsWith("condition-")
+                      ? `Connect this condition: ${node.data.conditions?.find((condition) => `condition-${condition.id}` === output.id)?.value || "caller matches this condition"}`
+                      : output.id === "out-a"
+                        ? `Connect the If path: ${node.data.ifCondition || "caller confirms"}`
+                        : output.id === "out-b"
+                          ? `Connect the Otherwise path: ${node.data.otherwise || "other answers"}`
+                          : "Connect the next step"
                   }
                   onMouseDown={(e) => onHandleMouseDown?.(e, node.id, output.id)}
                   className="flex h-6 w-6 -translate-x-1/2 cursor-crosshair items-center justify-center"

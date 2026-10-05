@@ -21,7 +21,15 @@ function handlePosition(node, meta, handleId) {
   };
 }
 
-function edgePath(from, to) {
+function edgePath(from, to, waypoint) {
+  if (waypoint) {
+    const d1 = Math.max(40, Math.abs(waypoint.y - from.y) / 1.6);
+    const d2 = Math.max(40, Math.abs(to.y - waypoint.y) / 1.6);
+    return (
+      `M ${from.x} ${from.y} C ${from.x} ${from.y + d1}, ${waypoint.x} ${waypoint.y - d1}, ${waypoint.x} ${waypoint.y} ` +
+      `C ${waypoint.x} ${waypoint.y + d2}, ${to.x} ${to.y - d2}, ${to.x} ${to.y}`
+    );
+  }
   const dy = Math.max(60, Math.abs(to.y - from.y) / 1.6);
   return `M ${from.x} ${from.y} C ${from.x} ${from.y + dy}, ${to.x} ${to.y - dy}, ${to.x} ${to.y}`;
 }
@@ -73,10 +81,10 @@ export default function PathwayPreviewModal({ nodes, edges, name, description, o
               : "";
         return {
           id: edge.id,
-          d: edgePath(from, to),
+          d: edgePath(from, to, edge.waypoint),
           label,
-          labelX: (from.x + to.x) / 2,
-          labelY: (from.y + to.y) / 2,
+          labelX: edge.waypoint ? edge.waypoint.x : (from.x + to.x) / 2,
+          labelY: edge.waypoint ? edge.waypoint.y : (from.y + to.y) / 2,
         };
       })
       .filter(Boolean);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Minus, Maximize } from "lucide-react";
+import { Plus, Minus, Maximize, LayoutDashboard } from "lucide-react";
 import WorkflowNode from "./Workflownode";
-import { NODE_REGISTRY, NODE_WIDTH, NODE_HEIGHT, createNodeId } from "./Noderegistry";
+import { NODE_REGISTRY, NODE_WIDTH, NODE_HEIGHT, createNodeId, getNodeOutputs } from "./Noderegistry";
 
 const MIN_SCALE = 0.4;
 const MAX_SCALE = 1.75;
@@ -10,7 +10,7 @@ function handlePosition(node, meta, handleId) {
   if (handleId === "in") {
     return { x: node.position.x + NODE_WIDTH / 2, y: node.position.y };
   }
-  const outputs = meta.outputs || [];
+  const outputs = getNodeOutputs(node);
   const index = Math.max(
     0,
     outputs.findIndex((o) => o.id === handleId),
@@ -22,9 +22,66 @@ function handlePosition(node, meta, handleId) {
   };
 }
 
-function edgePath(from, to) {
+const GRID = 12; // nodes snap to this grid while dragging, so rows/columns line up
+
+const snap = (v) => Math.round(v / GRID) * GRID;
+
+// A connection is a smooth curve. If the user dragged it, `waypoint` is the
+// point the curve is bent through (saved on the edge, so it survives reloads).
+function edgePath(from, to, waypoint) {
+  if (waypoint) {
+    const d1 = Math.max(40, Math.abs(waypoint.y - from.y) / 1.6);
+    const d2 = Math.max(40, Math.abs(to.y - waypoint.y) / 1.6);
+    return (
+      `M ${from.x} ${from.y} C ${from.x} ${from.y + d1}, ${waypoint.x} ${waypoint.y - d1}, ${waypoint.x} ${waypoint.y} ` +
+      `C ${waypoint.x} ${waypoint.y + d2}, ${to.x} ${to.y - d2}, ${to.x} ${to.y}`
+    );
+  }
   const dy = Math.max(60, Math.abs(to.y - from.y) / 1.6);
   return `M ${from.x} ${from.y} C ${from.x} ${from.y + dy}, ${to.x} ${to.y - dy}, ${to.x} ${to.y}`;
+}
+
+// Auto-arrange: puts every node on a level (distance from the start node) and
+// spreads each level evenly, centred under the one above.
+function autoLayout(nodes, edges) {
+  const H_GAP = NODE_WIDTH + 72;
+  const V_GAP = NODE_HEIGHT + 130;
+  const ids = new Set(nodes.map((n) => n.id));
+  const level = {};
+  const start = nodes.find((n) => n.type === "start") || nodes[0];
+  if (!start) return nodes;
+  level[start.id] = 0;
+  // longest-path levelling, capped so a loop in the flow can't run forever
+  for (let pass = 0; pass < nodes.length; pass++) {
+    let changed = false;
+    for (const e of edges) {
+      if (!ids.has(e.source) || !ids.has(e.target) || level[e.source] === undefined) continue;
+      const next = level[e.source] + 1;
+      if (next < nodes.length && (level[e.target] === undefined || level[e.target] < next)) {
+        level[e.target] = next;
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  const maxLevel = Math.max(0, ...Object.values(level));
+  for (const n of nodes) if (level[n.id] === undefined) level[n.id] = maxLevel + 1; // unconnected nodes go last
+
+  const rows = {};
+  for (const n of nodes) (rows[level[n.id]] ||= []).push(n);
+  // keep left-to-right order stable: use the x the user already has
+  Object.values(rows).forEach((row) => row.sort((a, b) => a.position.x - b.position.x));
+
+  const widest = Math.max(...Object.values(rows).map((r) => r.length));
+  const centerX = 120 + ((widest - 1) * H_GAP) / 2;
+  const pos = {};
+  Object.entries(rows).forEach(([lvl, row]) => {
+    const startX = centerX - ((row.length - 1) * H_GAP) / 2;
+    row.forEach((n, i) => {
+      pos[n.id] = { x: snap(startX + i * H_GAP), y: snap(40 + Number(lvl) * V_GAP) };
+    });
+  });
+  return nodes.map((n) => ({ ...n, position: pos[n.id] }));
 }
 
 export default function PathwayCanvas({
@@ -43,6 +100,7 @@ export default function PathwayCanvas({
   const [connecting, setConnecting] = useState(null);
   const [dragOverCanvas, setDragOverCanvas] = useState(false);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+  const [edgeDragging, setEdgeDragging] = useState(null); // id of the connection being bent
 
   const screenToWorld = useCallback(
     (clientX, clientY) => {
@@ -81,7 +139,7 @@ export default function PathwayCanvas({
       setNodes((current) =>
         current.map((n) =>
           n.id === dragging.nodeId
-            ? { ...n, position: { x: world.x - dragging.offsetX, y: world.y - dragging.offsetY } }
+            ? { ...n, position: { x: snap(world.x - dragging.offsetX), y: snap(world.y - dragging.offsetY) } }
             : n,
         ),
       );
@@ -96,6 +154,27 @@ export default function PathwayCanvas({
       window.removeEventListener("mouseup", onUp);
     };
   }, [dragging, screenToWorld, setNodes]);
+
+  // ---- bending a connection (drag the line) ----
+  useEffect(() => {
+    if (!edgeDragging) return;
+    function onMove(e) {
+      const world = screenToWorld(e.clientX, e.clientY);
+      const waypoint = { x: snap(world.x), y: snap(world.y) };
+      setEdges((current) =>
+        current.map((edge) => (edge.id === edgeDragging ? { ...edge, waypoint } : edge)),
+      );
+    }
+    function onUp() {
+      setEdgeDragging(null);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [edgeDragging, screenToWorld, setEdges]);
 
   // ---- connection drawing ----
   useEffect(() => {
@@ -169,6 +248,23 @@ export default function PathwayCanvas({
     );
     setScale(nextScale);
     setPan({ x: -minX * nextScale, y: -minY * nextScale });
+  }
+
+  function arrangeNodes() {
+    setNodes((current) => autoLayout(current, edges));
+    // straight, default curves again — the old bends no longer fit the new layout
+    setEdges((current) => current.map(withoutBend));
+    setTimeout(fitView, 0);
+  }
+
+  function withoutBend(edge) {
+    const next = { ...edge };
+    delete next.waypoint;
+    return next;
+  }
+
+  function resetEdgeBend(edgeId) {
+    setEdges((current) => current.map((edge) => (edge.id === edgeId ? withoutBend(edge) : edge)));
   }
 
   function handleHeaderMouseDown(e, node) {
@@ -258,17 +354,21 @@ export default function PathwayCanvas({
         const targetMeta = NODE_REGISTRY[targetNode.type];
         const from = handlePosition(sourceNode, sourceMeta, edge.sourceHandle || "out");
         const to = handlePosition(targetNode, targetMeta, "in");
-        const label =
-          edge.sourceHandle === "out-a"
+        const condition = sourceNode.data?.conditions?.find(
+          (item) => `condition-${item.id}` === edge.sourceHandle,
+        );
+        const label = condition
+          ? `If: ${condition.value || "condition is met"}`
+          : edge.sourceHandle === "out-a"
             ? `If: ${sourceNode.data?.ifCondition || "condition is met"}`
             : edge.sourceHandle === "out-b"
               ? `Otherwise: ${sourceNode.data?.otherwise || "other answers"}`
               : "";
         return {
           id: edge.id,
-          d: edgePath(from, to),
-          midX: (from.x + to.x) / 2,
-          midY: (from.y + to.y) / 2,
+          d: edgePath(from, to, edge.waypoint),
+          midX: edge.waypoint ? edge.waypoint.x : (from.x + to.x) / 2,
+          midY: edge.waypoint ? edge.waypoint.y : (from.y + to.y) / 2,
           label,
         };
       })
@@ -362,11 +462,18 @@ export default function PathwayCanvas({
                     fill="none"
                     stroke="transparent"
                     strokeWidth={16}
-                    style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
+                    style={{ pointerEvents: "stroke", cursor: "move" }}
+                    onMouseDown={(e) => {
+                      // drag anywhere on the line to bend it
                       e.stopPropagation();
                       setSelectedEdgeId(edge.id);
+                      onSelectNode(null);
+                      setEdgeDragging(edge.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      resetEdgeBend(edge.id);
                     }}
                   />
                   <path
@@ -393,8 +500,27 @@ export default function PathwayCanvas({
                     </foreignObject>
                   )}
                   {isSelected && (
+                    <circle
+                      cx={edge.midX}
+                      cy={edge.midY}
+                      r={7}
+                      fill="white"
+                      stroke="#E5484D"
+                      strokeWidth={2.5}
+                      style={{ pointerEvents: "auto", cursor: "move" }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setEdgeDragging(edge.id);
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        resetEdgeBend(edge.id);
+                      }}
+                    />
+                  )}
+                  {isSelected && (
                     <g
-                      transform={`translate(${edge.midX}, ${edge.midY})`}
+                      transform={`translate(${edge.midX + 22}, ${edge.midY})`}
                       style={{ pointerEvents: "auto", cursor: "pointer" }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
@@ -465,6 +591,17 @@ export default function PathwayCanvas({
           aria-label="Fit view"
         >
           <Maximize size={14} />
+        </button>
+        <div className="mx-1 h-5 w-px bg-border-soft" />
+        <button
+          type="button"
+          onClick={arrangeNodes}
+          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-ink-soft hover:bg-surface-sunk"
+          aria-label="Auto-arrange nodes"
+          title="Tidy up: line the nodes up in neat rows"
+        >
+          <LayoutDashboard size={14} />
+          Auto-arrange
         </button>
       </div>
 

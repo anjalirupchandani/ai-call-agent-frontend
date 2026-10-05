@@ -145,6 +145,16 @@ export default function Pathways() {
   }, [selectedNodeId, deleteNode]);
 
   function handleSaveNode(nodeId, form) {
+    const firstCondition = form.conditions?.[0];
+    if (firstCondition) {
+      setEdges((current) =>
+        current.map((edge) =>
+          edge.source === nodeId && edge.sourceHandle === "out-a"
+            ? { ...edge, sourceHandle: `condition-${firstCondition.id}` }
+            : edge,
+        ),
+      );
+    }
     setNodes((current) =>
       current.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...form } } : n)),
     );
