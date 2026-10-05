@@ -213,7 +213,7 @@ export async function startEdesyCall({ phoneNumber, customerName, purpose, varia
 }
 
 export async function endCall(callId) {
-  return request(`/call/${callId}/end`, { method: "POST" });
+  return request(`/calls/${encodeURIComponent(callId)}/end`, { method: "POST" });
 }
 
 // ---- Campaigns ---------------------------------------------------------

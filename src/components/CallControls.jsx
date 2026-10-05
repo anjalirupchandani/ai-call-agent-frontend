@@ -1,11 +1,12 @@
 import { Mic, MicOff, Volume2, Grid3x3, Pause, Play, PhoneOff } from "lucide-react";
 
-function ControlButton({ active, onClick, icon: Icon, label, danger }) {
+function ControlButton({ active, onClick, icon: Icon, label, danger, disabled }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-2"
+      disabled={disabled}
+      className="flex flex-col items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <span
         className={`flex h-14 w-14 items-center justify-center rounded-full transition-colors ${
@@ -23,7 +24,7 @@ function ControlButton({ active, onClick, icon: Icon, label, danger }) {
   );
 }
 
-export default function CallControls({ muted, onToggleMute, paused, onTogglePause, onEndCall, onKeypad, onSpeaker, speakerOn }) {
+export default function CallControls({ muted, onToggleMute, paused, onTogglePause, onEndCall, onKeypad, onSpeaker, speakerOn, ending }) {
   return (
     <div className="flex items-center justify-center gap-5">
       <ControlButton
@@ -40,7 +41,7 @@ export default function CallControls({ muted, onToggleMute, paused, onTogglePaus
         icon={paused ? Play : Pause}
         label={paused ? "Resume" : "Pause"}
       />
-      <ControlButton onClick={onEndCall} icon={PhoneOff} label="End Call" danger />
+      <ControlButton onClick={onEndCall} icon={PhoneOff} label={ending ? "Ending…" : "End Call"} danger disabled={ending} />
     </div>
   );
 }
