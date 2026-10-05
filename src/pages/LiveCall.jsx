@@ -33,8 +33,6 @@ export default function LiveCall() {
   const [seconds,       setSeconds]       = useState(0);
   const [muted,         setMuted]         = useState(false);
   const [callStatus,    setCallStatus]    = useState("connecting"); // connecting | active | ended
-  const [ending,        setEnding]        = useState(false);
-  const [endError,      setEndError]      = useState("");
   const [finalStatus,   setFinalStatus]   = useState("");
   const [finalDuration, setFinalDuration] = useState("");
   const [gaveUp,        setGaveUp]        = useState(false);
@@ -133,26 +131,20 @@ export default function LiveCall() {
   }, [callId]);
 
   // ---- leave / end call ----------------------------------------------------
+  // For Edesy calls there is no hang-up API: the backend leaves the call alone
+  // and it ends when the agent or the recipient hangs up. This still stops the
+  // polling here and takes you to the call's details page.
   const handleEndCall = async () => {
-    if (ending) return;
-    setEnding(true);
-    setEndError("");
+    stopTimer();
+    stopPolling();
 
     try {
-      const result = await endCall(callId);
-      if (!result.ended && !TERMINAL_STATUSES.includes(result.status)) {
-        setEndError(result.message || "The call could not be confirmed as ended.");
-        return;
-      }
-
-      stopTimer();
-      stopPolling();
-      navigate(callId ? `/dashboard/calls/${callId}` : "/dashboard/calls");
+      await endCall(callId);
     } catch (err) {
-      setEndError(err.message || "Couldn't end the call. It may still be running; check Call History before retrying.");
-    } finally {
-      setEnding(false);
+      console.warn("[voice] failed to end call:", err);
     }
+
+    navigate(callId ? `/dashboard/calls/${callId}` : "/dashboard/calls");
   };
 
   // ---- mute (UI only — the call is on the recipient's phone) ---------------
@@ -233,11 +225,6 @@ export default function LiveCall() {
               {pollWarning}
             </p>
           )}
-          {endError && (
-            <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
-              {endError}
-            </p>
-          )}
 
           {/* CONTROLS */}
           <div className="mt-10 w-full border-t border-[var(--color-border-soft)] pt-8">
@@ -250,7 +237,6 @@ export default function LiveCall() {
               onSpeaker={() => {}}
               onKeypad={() => {}}
               onEndCall={handleEndCall}
-              ending={ending}
             />
           </div>
         </div>
