@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ArrowDownLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import DashboardShell from "../components/DashboardShell";
 import StatusBadge from "../components/StatusBadge";
-import { getCalls } from "../services/api";
+import { getCalls, deleteCall } from "../services/api";
 
 const FILTERS = ["All", "Completed", "In Progress", "Missed", "Failed"];
 
@@ -12,6 +12,7 @@ export default function Calls() {
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     getCalls()
@@ -19,6 +20,26 @@ export default function Calls() {
       .catch((err) => setError(err.message || "Couldn't load call history."))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (call) => {
+    if (deletingId) return;
+    const extra =
+      call.status === "In Progress"
+        ? "\n\nThis only removes it from your history. If the call is genuinely still running, it will not be hung up."
+        : "";
+    if (!window.confirm(`Delete the call with ${call.contact || call.phone}?${extra}`)) return;
+
+    setDeletingId(call.id);
+    setError("");
+    try {
+      await deleteCall(call.id);
+      setCalls((list) => list.filter((c) => c.id !== call.id));
+    } catch (err) {
+      setError(err.message || "Couldn't delete the call.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = useMemo(
     () => (filter === "All" ? calls : calls.filter((c) => c.status === filter)),
@@ -97,7 +118,17 @@ export default function Calls() {
                     <td className="px-5 py-3.5">
                       <StatusBadge status={call.status} />
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(call)}
+                        disabled={deletingId === call.id}
+                        title="Delete call"
+                        aria-label="Delete call"
+                        className="mr-3 inline-flex items-center rounded-lg p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      >
+                        {deletingId === call.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                      </button>
                       <Link
                         to={`/dashboard/calls/${call.id}`}
                         className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline"
@@ -111,7 +142,7 @@ export default function Calls() {
               </tbody>
             </table>
             {error && (
-              <p className="py-10 text-center text-sm text-red-600">{error}</p>
+              <p className={`${filtered.length ? "py-4" : "py-10"} text-center text-sm text-red-600`}>{error}</p>
             )}
             {!error && filtered.length === 0 && (
               <p className="py-10 text-center text-sm text-[var(--color-ink-muted)]">

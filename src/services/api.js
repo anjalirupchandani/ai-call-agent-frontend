@@ -159,6 +159,11 @@ export async function getCalls() {
   return request("/calls");
 }
 
+/** Remove a call from Call History (works for any status, incl. stuck "In Progress"). */
+export async function deleteCall(callId) {
+  return request(`/calls/${callId}`, { method: "DELETE" });
+}
+
 export async function getCallById(callId) {
   return request(`/calls/${callId}`);
 }
@@ -209,6 +214,19 @@ export async function startEdesyCall({ phoneNumber, customerName, purpose, varia
   return request("/calls", {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Place several calls in one request (Multiple Calls tab).
+ * @param {Array<{phoneNumber:string, customerName:string, purpose?:string, variables?:object, pathwayId?:string}>} calls  (max 50)
+ * @returns {Promise<{success:boolean, summary:{total:number,succeeded:number,failed:number},
+ *           results:Array<{phoneNumber:string,success:boolean,conversationId:string|null,dbId:string|null,error:string|null,code:string|null}>}>}
+ */
+export async function startBulkCalls(calls) {
+  return request("/calls/bulk", {
+    method: "POST",
+    body: JSON.stringify({ calls }),
   });
 }
 

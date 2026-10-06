@@ -7,7 +7,8 @@ import CallControls from "../components/CallControls";
 import TranscriptPanel from "../components/TranscriptPanel";
 import { getCallById, endCall } from "../services/api";
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 3000;
+const AUTO_LEAVE_DELAY_MS = 3000; // after the call ends, open its details automatically
 const POLL_MAX_DURATION_MS = 10 * 60 * 1000; // stop asking after 10 minutes
 const POLL_MAX_CONSECUTIVE_ERRORS = 5;
 const TERMINAL_STATUSES = ["Completed", "Failed", "Missed", "Cancelled", "Ended"];
@@ -42,6 +43,7 @@ export default function LiveCall() {
   // ---- refs ----------------------------------------------------------------
   const timerRef = useRef(null); // elapsed-time interval
   const pollRef  = useRef(null); // next-poll timeout
+  const leaveRef = useRef(null); // auto-leave timeout once the call has ended
 
   const stopTimer = () => {
     clearInterval(timerRef.current);
@@ -100,6 +102,11 @@ export default function LiveCall() {
           if (data.duration && data.duration !== "0:00") setFinalDuration(data.duration);
           stopTimer();
           stopPolling();
+          // The conversation is over (agent, customer or network ended it) — no
+          // need to press the red button: open the call's details automatically.
+          leaveRef.current = setTimeout(() => {
+            if (!cancelled) navigate(`/dashboard/calls/${callId}`);
+          }, AUTO_LEAVE_DELAY_MS);
           return; // final state reached — no more requests
         }
 
@@ -127,8 +134,9 @@ export default function LiveCall() {
       cancelled = true;
       stopTimer();
       stopPolling();
+      clearTimeout(leaveRef.current);
     };
-  }, [callId]);
+  }, [callId, navigate]);
 
   // ---- leave / end call ----------------------------------------------------
   // For Edesy calls there is no hang-up API: the backend leaves the call alone
@@ -137,6 +145,13 @@ export default function LiveCall() {
   const handleEndCall = async () => {
     stopTimer();
     stopPolling();
+    clearTimeout(leaveRef.current);
+
+    // Already ended on its own — just open the details.
+    if (callStatus === "ended") {
+      navigate(callId ? `/dashboard/calls/${callId}` : "/dashboard/calls");
+      return;
+    }
 
     try {
       await endCall(callId);
@@ -218,6 +233,11 @@ export default function LiveCall() {
           {isLive && (
             <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
               You can leave this screen — the call keeps going and appears in Call History.
+            </p>
+          )}
+          {callStatus === "ended" && !gaveUp && (
+            <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+              The call has ended — opening the call details…
             </p>
           )}
           {pollWarning && (
