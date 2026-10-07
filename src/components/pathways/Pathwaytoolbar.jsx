@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, Play, Save, Rocket, Check } from "lucide-react";
+import { ArrowLeft, Eye, Play, Save, Rocket, Check, Plus } from "lucide-react";
 
 export default function PathwayToolbar({
   savedAt,
@@ -8,6 +8,8 @@ export default function PathwayToolbar({
   onDeploy,
   onPreview,
   onDemo,
+  onNew,
+  isLoading,
   name,
   onNameChange,
 }) {
@@ -38,6 +40,16 @@ export default function PathwayToolbar({
           placeholder="Pathway name"
           className="w-36 shrink-0 rounded-lg border border-border bg-canvas px-2.5 py-1.5 text-sm font-medium text-ink focus:border-accent focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={onNew}
+          disabled={isLoading}
+          title="Create a new pathway"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-sm font-medium text-ink-soft hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus size={14} />
+          New pathway
+        </button>
 
         {savedAt && !justSaved && (
           <span className="hidden shrink-0 text-xs text-ink-muted lg:inline">Saved {savedAt}</span>

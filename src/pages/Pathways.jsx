@@ -119,6 +119,15 @@ export default function Pathways() {
     };
   }, []);
 
+  function handleNewPathway() {
+    setPathwayId(null);
+    setPathwayName("New pathway");
+    setNodes(DEFAULT_NODES);
+    setEdges(DEFAULT_EDGES);
+    setSelectedNodeId(null);
+    setSavedAt(null);
+  }
+
   const deleteNode = useCallback(
     (nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
@@ -214,6 +223,8 @@ export default function Pathways() {
           onDeploy={handleDeploy}
           onPreview={() => setShowPreview(true)}
           onDemo={() => setShowDemo(true)}
+          onNew={handleNewPathway}
+          isLoading={loading}
           name={pathwayName}
           onNameChange={setPathwayName}
         />
