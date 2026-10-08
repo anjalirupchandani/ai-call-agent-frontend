@@ -23,7 +23,7 @@ const FEATURES = [
 
 export default function AuthShell({ activeTab, children }) {
   return (
-    <div className="auth-dark relative min-h-screen overflow-hidden">
+    <div className="auth-dark relative min-h-screen overflow-x-hidden overflow-y-auto">
       <div className="auth-dark-grid" aria-hidden="true" />
       <div className="auth-dark-orb auth-dark-orb-a" aria-hidden="true" />
       <div className="auth-dark-orb auth-dark-orb-b" aria-hidden="true" />
@@ -95,7 +95,7 @@ export default function AuthShell({ activeTab, children }) {
                   className={`auth-dark-tab flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                     activeTab === "login"
                       ? "auth-dark-tab-active"
-                      : "text-[#8791BC] hover:text-white"
+                      : "text-[#A7B0D6] hover:text-white"
                   }`}
                 >
                   Login
@@ -105,7 +105,7 @@ export default function AuthShell({ activeTab, children }) {
                   className={`auth-dark-tab flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                     activeTab === "signup"
                       ? "auth-dark-tab-active"
-                      : "text-[#8791BC] hover:text-white"
+                      : "text-[#A7B0D6] hover:text-white"
                   }`}
                 >
                   Sign Up

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Search, Lock } from "lucide-react";
+import { Search, Lock, X } from "lucide-react";
 import { LIBRARY_NODE_TYPES } from "./Noderegistry";
 
-export default function NodeLibrary() {
+export default function NodeLibrary({ onClose }) {
   const [query, setQuery] = useState("");
 
   const filtered = LIBRARY_NODE_TYPES.filter((item) =>
@@ -18,7 +18,18 @@ export default function NodeLibrary() {
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="border-b border-[var(--color-border-soft)] px-4 py-3.5">
-        <p className="text-sm font-semibold text-[var(--color-ink)]">Add a call step</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-[var(--color-ink)]">Add a call step</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-sunk)] hover:text-[var(--color-ink)]"
+            aria-label="Hide call steps sidebar"
+            title="Hide sidebar"
+          >
+            <X size={16} />
+          </button>
+        </div>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-ink-muted)]">Drag a step onto the canvas, then connect its If and Otherwise paths.</p>
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-canvas)] px-2.5 py-1.5">
           <Search size={14} className="text-[var(--color-ink-muted)]" />

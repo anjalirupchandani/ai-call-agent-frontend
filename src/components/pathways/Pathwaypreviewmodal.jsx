@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { X } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Minus, Plus, X } from "lucide-react";
 import { NODE_REGISTRY, NODE_WIDTH, NODE_HEIGHT } from "./Noderegistry";
 
 // Same math PathwayCanvas uses to route a connection between two node
@@ -45,6 +45,11 @@ function edgePath(from, to, waypoint) {
  * "measure after mount" timing to get wrong.
  */
 export default function PathwayPreviewModal({ nodes, edges, name, description, onClose }) {
+  const [zoom, setZoom] = useState(2.4);
+  const viewportRef = useRef(null);
+  const viewScale = Math.min(zoom, 1);
+  const svgSize = Math.max(zoom, 1);
+
   useEffect(() => {
     function onKeyDown(e) {
       if (e.key === "Escape") onClose();
@@ -52,6 +57,13 @@ export default function PathwayPreviewModal({ nodes, edges, name, description, o
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+    viewport.scrollTop = 0;
+  }, []);
 
   const view = useMemo(() => {
     if (!nodes.length) return null;
@@ -126,11 +138,13 @@ export default function PathwayPreviewModal({ nodes, edges, name, description, o
               Nothing to preview yet — add some nodes first.
             </div>
           ) : (
-            <svg
-              viewBox={`${view.minX} ${view.minY} ${view.width} ${view.height}`}
-              preserveAspectRatio="xMidYMid meet"
-              className="h-full w-full"
-            >
+            <div ref={viewportRef} className="pathway-preview-scroll h-full w-full overflow-auto" style={{ scrollbarGutter: "stable" }}>
+              <svg
+                viewBox={`${view.minX + (view.width - view.width / viewScale) / 2} ${view.minY + (view.height - view.height / viewScale) / 2} ${view.width / viewScale} ${view.height / viewScale}`}
+                preserveAspectRatio="xMidYMid meet"
+                className="block"
+                style={{ width: `${svgSize * 100}%`, height: `${svgSize * 100}%` }}
+              >
               {view.edgeLines.map((edge) => (
                 <path
                   key={edge.id}
@@ -196,7 +210,35 @@ export default function PathwayPreviewModal({ nodes, edges, name, description, o
                   </foreignObject>
                 );
               })}
-            </svg>
+              </svg>
+            </div>
+          )}
+          {view && (
+            <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-(--shadow-card)" aria-label="Pathway preview zoom controls">
+              <button
+                type="button"
+                onClick={() => setZoom((current) => Math.max(0.5, Number((current / 1.2).toFixed(2))))}
+                disabled={zoom <= 0.5}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Zoom out pathway preview"
+                title="Zoom out"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="w-12 text-center text-xs font-medium text-ink-muted" aria-live="polite">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoom((current) => Math.min(2.5, Number((current * 1.2).toFixed(2))))}
+                disabled={zoom >= 2.5}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Zoom in pathway preview"
+                title="Zoom in"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           )}
         </div>
       </div>

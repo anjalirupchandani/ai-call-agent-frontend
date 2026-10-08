@@ -80,6 +80,31 @@ html, body {
   scrollbar-color: var(--color-border) transparent;
 }
 
+.pathway-preview-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(91, 79, 233, 0.65) rgba(91, 79, 233, 0.08);
+}
+
+.pathway-preview-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.pathway-preview-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(91, 79, 233, 0.08);
+}
+
+.pathway-preview-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid var(--color-canvas);
+  border-radius: 999px;
+  background: rgba(91, 79, 233, 0.65);
+}
+
+.pathway-preview-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5B4FE9;
+}
+
 ::selection {
   background: var(--color-accent);
   color: white;
@@ -183,13 +208,32 @@ html, body {
 }
 
 .auth-dark-tab {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
   border-bottom: 2px solid transparent;
-  transition: color 200ms ease, border-color 200ms ease;
+  transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+
+.auth-dark-tab:hover {
+  background: rgba(139, 92, 246, 0.12);
+  color: #FFFFFF;
+}
+
+.auth-dark-tab:focus-visible,
+.auth-dark-submit:focus-visible {
+  outline: 2px solid #C4B5FD;
+  outline-offset: 3px;
 }
 
 .auth-dark-tab-active {
-  color: #C4B5FD;
-  border-color: #8B5CF6;
+  color: #FFFFFF;
+  border-color: rgba(196, 181, 253, 0.32);
+  border-bottom-color: #C4B5FD;
+  background: rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.16);
 }
 
 .auth-dark-input-group {
@@ -204,6 +248,8 @@ html, body {
 }
 
 .auth-dark-submit {
+  min-height: 3.25rem;
+  border: 1px solid rgba(196, 181, 253, 0.28);
   background: linear-gradient(90deg, #6C4DFF, #3B82F6);
   box-shadow: 0 14px 32px -12px rgba(108, 77, 255, 0.55);
 }

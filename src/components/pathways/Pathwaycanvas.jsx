@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Minus, Maximize, LayoutDashboard } from "lucide-react";
 import WorkflowNode from "./Workflownode";
 import { NODE_REGISTRY, NODE_WIDTH, NODE_HEIGHT, createNodeId, getNodeOutputs } from "./Noderegistry";
@@ -93,6 +93,7 @@ export default function PathwayCanvas({
   onSelectNode,
 }) {
   const containerRef = useRef(null);
+  const hasInitialFit = useRef(false);
   const [pan, setPan] = useState({ x: 140, y: 60 });
   const [scale, setScale] = useState(0.9);
   const [panning, setPanning] = useState(null);
@@ -233,28 +234,43 @@ export default function PathwayCanvas({
     setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s * factor)));
   }
 
-  function fitView() {
+  const fitView = useCallback((targetScale, alignStart = false) => {
     if (nodes.length === 0) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect?.width || !rect.height) return;
     const xs = nodes.map((n) => n.position.x);
     const ys = nodes.map((n) => n.position.y);
     const minX = Math.min(...xs) - 60;
     const minY = Math.min(...ys) - 60;
     const maxX = Math.max(...xs) + NODE_WIDTH + 60;
     const maxY = Math.max(...ys) + NODE_HEIGHT + 60;
-    const rect = containerRef.current.getBoundingClientRect();
-    const nextScale = Math.min(
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const nextScale = targetScale ?? Math.min(
       MAX_SCALE,
-      Math.max(MIN_SCALE, Math.min(rect.width / (maxX - minX), rect.height / (maxY - minY))),
+      Math.max(MIN_SCALE, Math.min(rect.width / width, rect.height / height)),
     );
     setScale(nextScale);
-    setPan({ x: -minX * nextScale, y: -minY * nextScale });
-  }
+    const startNode = nodes.find((node) => node.type === "start");
+    setPan({
+      x: (rect.width - width * nextScale) / 2 - minX * nextScale,
+      y: alignStart && startNode
+        ? 24 - startNode.position.y * nextScale
+        : (rect.height - height * nextScale) / 2 - minY * nextScale,
+    });
+  }, [nodes]);
+
+  useLayoutEffect(() => {
+    if (hasInitialFit.current || nodes.length === 0) return;
+    hasInitialFit.current = true;
+    fitView(0.77, true);
+  }, [fitView, nodes]);
 
   function arrangeNodes() {
     setNodes((current) => autoLayout(current, edges));
     // straight, default curves again — the old bends no longer fit the new layout
     setEdges((current) => current.map(withoutBend));
-    setTimeout(fitView, 0);
+    setTimeout(() => fitView(), 0);
   }
 
   function withoutBend(edge) {
@@ -586,7 +602,7 @@ export default function PathwayCanvas({
         <div className="mx-1 h-5 w-px bg-border-soft" />
         <button
           type="button"
-          onClick={fitView}
+          onClick={() => fitView()}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-sunk"
           aria-label="Fit view"
         >

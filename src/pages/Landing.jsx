@@ -66,6 +66,7 @@ const PATHWAYS = [
 
 export default function Landing() {
   const [activePathwayId, setActivePathwayId] = useState(PATHWAYS[0].id);
+  const [pathwayZoom, setPathwayZoom] = useState(1);
   const activePathway = PATHWAYS.find((pathway) => pathway.id === activePathwayId) ?? PATHWAYS[0];
 
   return (
@@ -188,7 +189,27 @@ export default function Landing() {
           </div>
 
           <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-canvas)] p-4 shadow-[var(--shadow-card)] sm:p-6">
-            <div key={activePathway.id} className="animate-fade-up">
+            <div className="mb-4 flex justify-end gap-2" aria-label="Pathway preview zoom">
+              <button
+                type="button"
+                aria-label="Zoom out pathway preview"
+                disabled={pathwayZoom <= 0.8}
+                onClick={() => setPathwayZoom((zoom) => Math.max(0.8, Number((zoom - 0.1).toFixed(1))))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-lg font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-sunk)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom in pathway preview"
+                disabled={pathwayZoom >= 1.4}
+                onClick={() => setPathwayZoom((zoom) => Math.min(1.4, Number((zoom + 0.1).toFixed(1))))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-lg font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-sunk)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                +
+              </button>
+            </div>
+            <div key={activePathway.id} className="animate-fade-up" style={{ zoom: pathwayZoom }}>
               <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-soft)] pb-5">
                 <div>
                   <p className="font-[family-name:var(--font-mono)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">

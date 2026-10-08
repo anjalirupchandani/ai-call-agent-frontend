@@ -5,6 +5,7 @@ import NodeLibrary from "../components/pathways/Nodelibrary";
 import NodeConfigPanel from "../components/pathways/Nodeconfigpanel";
 import PathwayCanvas from "../components/pathways/Pathwaycanvas";
 import PathwayPreviewModal from "../components/pathways/Pathwaypreviewmodal";
+import { ChevronRight } from "lucide-react";
 import { NODE_REGISTRY } from "../components/pathways/Noderegistry";
 import { getPathways, createPathway, updatePathway } from "../services/api";
 
@@ -87,6 +88,7 @@ export default function Pathways() {
   const [toast, setToast] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -229,7 +231,7 @@ export default function Pathways() {
           onNameChange={setPathwayName}
         />
 
-        <div className="flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 flex-1">
           {loading ? (
             <div className="flex flex-1 items-center justify-center text-sm text-ink-muted">
               Loading pathway…
@@ -241,19 +243,36 @@ export default function Pathways() {
               setNodes={setNodes}
               setEdges={setEdges}
               selectedNodeId={selectedNodeId}
-              onSelectNode={setSelectedNodeId}
+              onSelectNode={(nodeId) => {
+                setSelectedNodeId(nodeId);
+                if (nodeId) setShowRightPanel(true);
+              }}
             />
           )}
 
-          {selectedNode ? (
-            <NodeConfigPanel
-              node={selectedNode}
-              onClose={() => setSelectedNodeId(null)}
-              onSave={handleSaveNode}
-              onDelete={deleteNode}
-            />
+          {showRightPanel ? (
+            selectedNode ? (
+              <NodeConfigPanel
+                key={selectedNode.id}
+                node={selectedNode}
+                onClose={() => setShowRightPanel(false)}
+                onSave={handleSaveNode}
+                onDelete={deleteNode}
+              />
+            ) : (
+              <NodeLibrary onClose={() => setShowRightPanel(false)} />
+            )
           ) : (
-            <NodeLibrary />
+            <button
+              type="button"
+              onClick={() => setShowRightPanel(true)}
+              className="absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink-soft shadow-(--shadow-card) hover:bg-surface-sunk"
+              aria-label="Show pathway sidebar"
+              title="Show sidebar"
+            >
+              <ChevronRight size={15} />
+              Show sidebar
+            </button>
           )}
         </div>
 
