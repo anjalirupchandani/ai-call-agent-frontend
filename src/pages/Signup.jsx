@@ -46,10 +46,10 @@ export default function Signup() {
 
   return (
     <AuthShell activeTab="signup">
-      <h1 className="font-display text-3xl font-semibold tracking-[-0.02em] text-white">
+      <h1 className="font-display text-3xl font-semibold tracking-[-0.02em] text-[var(--color-ink)]">
         Create your account
       </h1>
-      <p className="mt-2 text-sm text-[#A7B0D6]">Start building smarter conversations with AI.</p>
+      <p className="mt-2 text-sm text-[var(--color-ink-muted)]">Start building smarter conversations with AI.</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <AuthField
@@ -88,7 +88,7 @@ export default function Signup() {
             <button
               type="button"
               onClick={() => setShowPassword((s) => !s)}
-              className="shrink-0 text-[#5C6699] transition-colors hover:text-[#A7B0D6]"
+              className="shrink-0 text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-accent)]"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -108,7 +108,7 @@ export default function Signup() {
           placeholder="Confirm password"
         />
 
-        {error && <p className="rounded-xl bg-[rgba(239,91,78,0.12)] px-3 py-2 text-sm text-[#FF9086]">{error}</p>}
+        {error && <p className="rounded-xl bg-[var(--color-warn-dim)] px-3 py-2 text-sm text-[var(--color-warn-ink)]">{error}</p>}
 
         <button
           type="submit"
@@ -120,9 +120,9 @@ export default function Signup() {
         </button>
       </form>
 
-      <p className="mt-7 text-center text-sm text-[#8791BC]">
+      <p className="mt-7 text-center text-sm text-[var(--color-ink-muted)]">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-[#C4B5FD] hover:text-white">
+        <Link to="/login" className="font-semibold text-[var(--color-accent-ink)] hover:text-[var(--color-accent)]">
           Login
         </Link>
       </p>

@@ -141,11 +141,11 @@ html, body {
 /* ── Auth pages: dark AI-SaaS theme (scoped to Login / Signup only) ───────── */
 
 .auth-dark {
-  background: #070B2A;
+  background: var(--color-canvas);
   background-image:
-    radial-gradient(circle at 20% 15%, rgba(108, 77, 255, 0.16), transparent 40rem),
-    radial-gradient(circle at 82% 70%, rgba(59, 130, 246, 0.14), transparent 36rem),
-    linear-gradient(160deg, #070B2A 0%, #0B1035 55%, #0D133D 100%);
+    radial-gradient(circle at 20% 15%, rgba(108, 77, 255, 0.08), transparent 40rem),
+    radial-gradient(circle at 82% 70%, rgba(59, 130, 246, 0.07), transparent 36rem),
+    linear-gradient(160deg, var(--color-canvas) 0%, var(--color-surface-sunk) 55%, var(--color-canvas) 100%);
   background-size: 200% 200%;
   animation: auth-dark-drift 18s ease-in-out infinite;
 }
@@ -155,8 +155,8 @@ html, body {
   inset: 0;
   opacity: 0.35;
   background-image:
-    linear-gradient(rgba(139, 92, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(91, 79, 233, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 79, 233, 0.035) 1px, transparent 1px);
   background-size: 34px 34px;
   mask-image: radial-gradient(circle at 30% 30%, black, transparent 68%);
   pointer-events: none;
@@ -175,7 +175,7 @@ html, body {
   left: 8%;
   width: 26rem;
   height: 26rem;
-  background: radial-gradient(circle, rgba(108, 77, 255, 0.28), transparent 70%);
+  background: radial-gradient(circle, rgba(108, 77, 255, 0.12), transparent 70%);
 }
 
 .auth-dark-orb-b {
@@ -183,7 +183,7 @@ html, body {
   right: 6%;
   width: 30rem;
   height: 30rem;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%);
   animation-delay: -4.5s;
 }
 
@@ -195,16 +195,15 @@ html, body {
 }
 
 .auth-dark-feature-icon {
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25);
+  background: var(--color-accent-dim);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 .auth-dark-card {
-  background: rgba(13, 19, 61, 0.72);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 30px 90px -30px rgba(108, 77, 255, 0.45), 0 0 0 1px rgba(139, 92, 246, 0.06) inset;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 .auth-dark-tab {
@@ -218,33 +217,32 @@ html, body {
 }
 
 .auth-dark-tab:hover {
-  background: rgba(139, 92, 246, 0.12);
-  color: #FFFFFF;
+  background: var(--color-accent-dim);
+  color: var(--color-accent-ink);
 }
 
 .auth-dark-tab:focus-visible,
 .auth-dark-submit:focus-visible {
-  outline: 2px solid #C4B5FD;
+  outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
 
 .auth-dark-tab-active {
-  color: #FFFFFF;
-  border-color: rgba(196, 181, 253, 0.32);
-  border-bottom-color: #C4B5FD;
-  background: rgba(139, 92, 246, 0.2);
-  box-shadow: 0 0 18px rgba(139, 92, 246, 0.16);
+  color: var(--color-accent-ink);
+  border-color: rgba(91, 79, 233, 0.2);
+  border-bottom-color: var(--color-accent);
+  background: var(--color-accent-dim);
 }
 
 .auth-dark-input-group {
-  background: rgba(7, 11, 42, 0.55);
-  border: 1px solid rgba(139, 92, 246, 0.22);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .auth-dark-input-group:focus-within {
-  border-color: #8B5CF6;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-dim);
 }
 
 .auth-dark-submit {

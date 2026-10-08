@@ -39,18 +39,18 @@ export default function AuthShell({ activeTab, children }) {
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-[#6C4DFF] to-[#3B82F6] shadow-[0_0_20px_rgba(139,92,246,0.5)]">
                 <Waveform size="sm" color="white" />
               </span>
-              <span className="font-display text-[17px] font-semibold text-white">
+              <span className="font-display text-[17px] font-semibold text-[var(--color-ink)]">
                 AI Call Agent
               </span>
             </Link>
 
-            <h1 className="mt-14 font-display text-[44px] font-semibold leading-[1.08] tracking-[-0.02em] text-white xl:text-[52px]">
+            <h1 className="mt-14 font-display text-[44px] font-semibold leading-[1.08] tracking-[-0.02em] text-[var(--color-ink)] xl:text-[52px]">
               Let AI do the
               <br />
               <span className="auth-dark-gradient-text">talking.</span>
             </h1>
 
-            <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-[#A7B0D6]">
+            <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-[var(--color-ink-muted)]">
               Automate outbound calls, connect with leads, and grow your
               business — all with AI.
             </p>
@@ -59,13 +59,13 @@ export default function AuthShell({ activeTab, children }) {
               {FEATURES.map(({ icon: Icon, title, description }) => (
                 <li key={title} className="flex items-center gap-4">
                   <span className="auth-dark-feature-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
-                    <Icon size={18} className="text-[#C4B5FD]" />
+                    <Icon size={18} className="text-[var(--color-accent)]" />
                   </span>
                   <span>
-                    <span className="block text-sm font-medium text-white">
+                    <span className="block text-sm font-medium text-[var(--color-ink)]">
                       {title}
                     </span>
-                    <span className="block text-[13px] text-[#8791BC]">
+                    <span className="block text-[13px] text-[var(--color-ink-muted)]">
                       {description}
                     </span>
                   </span>
@@ -89,13 +89,13 @@ export default function AuthShell({ activeTab, children }) {
             style={{ animationDelay: "80ms" }}
           >
             <div className="auth-dark-card relative rounded-[22px] p-7 sm:p-10">
-              <div className="mb-8 flex rounded-xl bg-black/20 p-1">
+              <div className="mb-8 flex rounded-xl bg-[var(--color-surface-sunk)] p-1">
                 <Link
                   to="/login"
                   className={`auth-dark-tab flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                     activeTab === "login"
                       ? "auth-dark-tab-active"
-                      : "text-[#A7B0D6] hover:text-white"
+                      : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
                   }`}
                 >
                   Login
@@ -105,7 +105,7 @@ export default function AuthShell({ activeTab, children }) {
                   className={`auth-dark-tab flex-1 rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                     activeTab === "signup"
                       ? "auth-dark-tab-active"
-                      : "text-[#A7B0D6] hover:text-white"
+                      : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
                   }`}
                 >
                   Sign Up
