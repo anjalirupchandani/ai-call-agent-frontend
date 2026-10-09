@@ -8,6 +8,28 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const TOKEN_KEY = "ai_call_agent_token";
 
+// ngrok's free tier shows an HTML "Visit Site" warning page instead of your API
+// unless this header is sent. Only added when the API URL is an ngrok URL.
+const EXTRA_HEADERS = BASE_URL.includes("ngrok")
+  ? { "ngrok-skip-browser-warning": "true" }
+  : {};
+
+// Parse a response as JSON, but fail LOUDLY if the server sent something else
+// (HTML error page, ngrok warning page, proxy error, empty body...).
+async function parseJson(res, path) {
+  const raw = await res.text();
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.error(`[api] Non-JSON response from ${BASE_URL}${path} (HTTP ${res.status}):`, raw.slice(0, 200));
+    throw new Error(
+      `Server returned an unexpected response (HTTP ${res.status}). ` +
+        `Check that the backend is running and VITE_API_BASE_URL is correct.`
+    );
+  }
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -22,11 +44,12 @@ async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...EXTRA_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...options,
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await parseJson(res, path);
   if (!res.ok) {
     if (res.status === 401) setToken(null); // stale/expired token — clear it
     throw new Error(data?.message || `Request to ${path} failed (${res.status})`);
@@ -42,12 +65,13 @@ async function uploadRequest(path, formData, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: {
+      ...EXTRA_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: formData,
     ...options,
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await parseJson(res, path);
   if (!res.ok) {
     if (res.status === 401) setToken(null);
     throw new Error(data?.message || `Request to ${path} failed (${res.status})`);
@@ -57,18 +81,28 @@ async function uploadRequest(path, formData, options = {}) {
 
 // ---- Auth -------------------------------------------------------------
 
+function requireToken(data) {
+  if (!data?.token) {
+    console.error("[auth] Response had no token:", data);
+    throw new Error("Login succeeded but the server did not return a token.");
+  }
+  return data;
+}
+
 export async function signup({ name, email, password }) {
-  return request("/auth/signup", {
+  const data = await request("/auth/signup", {
     method: "POST",
     body: JSON.stringify({ name, email, password }),
   });
+  return requireToken(data);
 }
 
 export async function login({ email, password }) {
-  return request("/auth/login", {
+  const data = await request("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  return requireToken(data);
 }
 
 export async function getMe() {
