@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, Play, Save, Rocket, Check, Plus } from "lucide-react";
+import { ArrowLeft, Eye, Play, Save, Rocket, Check, Plus, ChevronDown } from "lucide-react";
 
 export default function PathwayToolbar({
   savedAt,
@@ -9,12 +9,19 @@ export default function PathwayToolbar({
   onPreview,
   onDemo,
   onNew,
+  onSelectSavedPathway,
+  staticPathways,
+  savedPathways,
   isLoading,
   name,
   onNameChange,
 }) {
   const navigate = useNavigate();
   const [justSaved, setJustSaved] = useState(false);
+  const [selectedStaticPathway, setSelectedStaticPathway] = useState("");
+  const vPanditPathway = savedPathways.find((pathway) =>
+    pathway.name?.toLowerCase().startsWith("v pandit"),
+  );
 
   function handleSave() {
     onSave();
@@ -50,6 +57,34 @@ export default function PathwayToolbar({
           <Plus size={14} />
           New pathway
         </button>
+        <div className="relative shrink-0">
+          <select
+            aria-label="Choose a pathway"
+            value={selectedStaticPathway}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value.startsWith("saved:")) onSelectSavedPathway(value.slice(6));
+              else if (value) onNew(value);
+              setSelectedStaticPathway("");
+            }}
+            disabled={isLoading}
+            className="h-9 appearance-none rounded-lg border border-border bg-surface px-3 pr-8 text-sm font-medium text-ink-soft hover:bg-surface-sunk disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="" disabled>Choose a pathway</option>
+            {vPanditPathway && (
+              <option value={`saved:${vPanditPathway._id || vPanditPathway.id}`}>
+                {vPanditPathway.name}
+              </option>
+            )}
+            {staticPathways.map((pathway) => (
+              <option key={pathway} value={pathway}>{pathway}</option>
+            ))}
+          </select>
+          <ChevronDown
+            size={14}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+        </div>
 
         {savedAt && !justSaved && (
           <span className="hidden shrink-0 text-xs text-ink-muted lg:inline">Saved {savedAt}</span>

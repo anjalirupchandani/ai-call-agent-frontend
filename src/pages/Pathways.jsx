@@ -16,61 +16,122 @@ const DEFAULT_NODES = [
     position: { x: 120, y: 40 },
     data: {
       ...NODE_REGISTRY.start.defaultData,
-      description: "Hi, this is Riley calling to confirm your appointment for Thursday at 2 PM. Does that still work for you?",
+      description: "Hi, this is Riley calling about your appointment. Which language would you prefer to speak?",
+    },
+  },
+  {
+    id: "language-1",
+    type: "default",
+    position: { x: 120, y: 220 },
+    data: {
+      ...NODE_REGISTRY.default.defaultData,
+      name: "Language preference",
+      description: "Acknowledge the caller's preferred language and continue the conversation in that language when supported. If unclear, ask them to repeat or choose from the available languages.",
+    },
+  },
+  {
+    id: "confirm-time-1",
+    type: "default",
+    position: { x: 120, y: 400 },
+    data: {
+      ...NODE_REGISTRY.default.defaultData,
+      name: "Confirm appointment time",
+      description: "In the caller's preferred language, state the appointment date and time on file and ask whether it still works. Wait for a clear answer; if they have questions, answer using the available appointment details.",
     },
   },
   {
     id: "route-1",
     type: "route",
-    position: { x: 120, y: 240 },
+    position: { x: 120, y: 580 },
     data: {
       ...NODE_REGISTRY.route.defaultData,
-      ifCondition: "Caller confirms the appointment still works",
-      otherwise: "Caller needs a different time",
+      ifCondition: "Caller confirms the appointment date and time",
+      otherwise: "Caller requests a different time or has not confirmed",
     },
   },
   {
     id: "greeting-1",
     type: "default",
-    position: { x: -140, y: 460 },
+    position: { x: -140, y: 800 },
     data: {
+      ...NODE_REGISTRY.default.defaultData,
       name: "Confirm appointment",
-      description: "Thank them and repeat the appointment details so they know it is confirmed.",
+      description: "Thank the caller and repeat the confirmed date and time. Ask if they have any other questions or appointment-related needs, respond using the available details, and close politely in their preferred language.",
       status: "Active",
+    },
+  },
+  {
+    id: "newconvo-1",
+    type: "default",
+    position: { x: 340, y: 800 },
+    data: {
+      ...NODE_REGISTRY.default.defaultData,
+      name: "Offer to reschedule",
+      description: "Ask what date or time would work better, note their preference, and explain the next step for rescheduling. Answer any appointment-related questions using available details, then close politely in their preferred language.",
+      status: "Draft",
     },
   },
   {
     id: "endcall-1",
     type: "endCall",
-    position: { x: 120, y: 660 },
+    position: { x: 120, y: 1000 },
     data: { ...NODE_REGISTRY.endCall.defaultData },
-  },
-  {
-    id: "newconvo-1",
-    type: "default",
-    position: { x: 340, y: 460 },
-    data: {
-      name: "Offer to rebook",
-      description: "Ask what time works better and explain the next step to reschedule.",
-      status: "Draft",
-    },
   },
 ];
 
 const DEFAULT_EDGES = [
-  { id: "edge-start-route", source: "start-1", sourceHandle: "out", target: "route-1" },
+  { id: "edge-start-language", source: "start-1", sourceHandle: "out", target: "language-1" },
+  { id: "edge-language-confirm-time", source: "language-1", sourceHandle: "out", target: "confirm-time-1" },
+  { id: "edge-confirm-time-route", source: "confirm-time-1", sourceHandle: "out", target: "route-1" },
   { id: "edge-route-greeting", source: "route-1", sourceHandle: "out-a", target: "greeting-1" },
   { id: "edge-greeting-endcall", source: "greeting-1", sourceHandle: "out", target: "endcall-1" },
   { id: "edge-route-newconvo", source: "route-1", sourceHandle: "out-b", target: "newconvo-1" },
   { id: "edge-newconvo-endcall", source: "newconvo-1", sourceHandle: "out", target: "endcall-1" },
 ];
 
+const BASIC_NODES = [
+  {
+    id: "start-basic",
+    type: "start",
+    position: { x: 120, y: 40 },
+    data: {
+      ...NODE_REGISTRY.start.defaultData,
+      description: "Hi, this is Riley. How can I help you today?",
+    },
+  },
+  {
+    id: "response-basic",
+    type: "default",
+    position: { x: 120, y: 240 },
+    data: {
+      ...NODE_REGISTRY.default.defaultData,
+      name: "Understand caller's needs",
+      description: "Listen to the caller, answer their questions, and ask a follow-up question if more information is needed.",
+    },
+  },
+  {
+    id: "end-basic",
+    type: "endCall",
+    position: { x: 120, y: 440 },
+    data: { ...NODE_REGISTRY.endCall.defaultData },
+  },
+];
+
+const BASIC_EDGES = [
+  { id: "edge-basic-start-response", source: "start-basic", sourceHandle: "out", target: "response-basic" },
+  { id: "edge-basic-response-end", source: "response-basic", sourceHandle: "out", target: "end-basic" },
+];
+
+const STATIC_PATHWAYS = ["Appointment"];
+
 const DEMO_POSITIONS = {
   "start-1": { x: 450, y: 20 },
-  "route-1": { x: 450, y: 150 },
-  "greeting-1": { x: 20, y: 300 },
-  "newconvo-1": { x: 880, y: 300 },
-  "endcall-1": { x: 450, y: 450 },
+  "language-1": { x: 450, y: 150 },
+  "confirm-time-1": { x: 450, y: 280 },
+  "route-1": { x: 450, y: 410 },
+  "greeting-1": { x: 20, y: 560 },
+  "newconvo-1": { x: 880, y: 560 },
+  "endcall-1": { x: 450, y: 700 },
 };
 const DEMO_NODES = DEFAULT_NODES.map((node) => ({
   ...node,
@@ -79,6 +140,7 @@ const DEMO_NODES = DEFAULT_NODES.map((node) => ({
 
 export default function Pathways() {
   const [pathwayId, setPathwayId] = useState(null);
+  const [savedPathways, setSavedPathways] = useState([]);
   const [pathwayName, setPathwayName] = useState("Appointment confirmation");
   const [nodes, setNodes] = useState(DEFAULT_NODES);
   const [edges, setEdges] = useState(DEFAULT_EDGES);
@@ -100,6 +162,7 @@ export default function Pathways() {
     async function load() {
       try {
         const pathways = await getPathways();
+        if (!cancelled) setSavedPathways(Array.isArray(pathways) ? pathways : []);
         if (!cancelled && pathways?.length) {
           const latest = pathways[0];
           setPathwayId(latest._id);
@@ -121,11 +184,23 @@ export default function Pathways() {
     };
   }, []);
 
-  function handleNewPathway() {
+  function handleNewPathway(name = "New pathway") {
+    const isAppointment = name === "Appointment";
     setPathwayId(null);
-    setPathwayName("New pathway");
-    setNodes(DEFAULT_NODES);
-    setEdges(DEFAULT_EDGES);
+    setPathwayName(name);
+    setNodes(isAppointment ? DEFAULT_NODES : BASIC_NODES);
+    setEdges(isAppointment ? DEFAULT_EDGES : BASIC_EDGES);
+    setSelectedNodeId(null);
+    setSavedAt(null);
+  }
+
+  function handleSelectSavedPathway(id) {
+    const pathway = savedPathways.find((item) => (item._id || item.id) === id);
+    if (!pathway) return;
+    setPathwayId(pathway._id || pathway.id);
+    setPathwayName(pathway.name || "Untitled pathway");
+    setNodes(pathway.nodes?.length ? pathway.nodes : DEFAULT_NODES);
+    setEdges(pathway.edges?.length ? pathway.edges : DEFAULT_EDGES);
     setSelectedNodeId(null);
     setSavedAt(null);
   }
@@ -226,6 +301,9 @@ export default function Pathways() {
           onPreview={() => setShowPreview(true)}
           onDemo={() => setShowDemo(true)}
           onNew={handleNewPathway}
+          onSelectSavedPathway={handleSelectSavedPathway}
+          staticPathways={STATIC_PATHWAYS}
+          savedPathways={savedPathways}
           isLoading={loading}
           name={pathwayName}
           onNameChange={setPathwayName}
