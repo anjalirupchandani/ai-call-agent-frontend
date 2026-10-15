@@ -1,9 +1,9 @@
 // services/api.js
 // API service abstraction.
 //
-// Every page calls functions from this file — none of them talk to Retell
-// directly. These call the Express backend in /server which uses the
-// Retell AI REST API with credentials kept server-side only.
+// Every page calls functions from this file — none of them talk to Edesy
+// directly. These call the Express backend, which holds the Edesy credentials
+// server-side only.
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const TOKEN_KEY = "ai_call_agent_token";
@@ -89,10 +89,10 @@ function requireToken(data) {
   return data;
 }
 
-export async function signup({ name, email, password }) {
+export async function signup({ name, email, phone, password }) {
   const data = await request("/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, phone, password }),
   });
   return requireToken(data);
 }
@@ -139,7 +139,7 @@ export async function markAllNotificationsAsRead() {
  * @returns {Promise<Object>} Updated user data
  */
 export async function updateUser(userData) {
-  return request("/users/update", {
+  return request("/users/profile", {
     method: "PUT",
     body: JSON.stringify(userData),
   });
@@ -224,13 +224,6 @@ export async function deleteContact(id) {
   return request(`/contacts/${id}`, { method: "DELETE" });
 }
 
-export async function startCall(payload) {
-  return request("/call/start", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
 /**
  * Start ONE real outbound call through Edesy (via our own backend — the Edesy
  * API key never reaches the browser).
@@ -265,7 +258,7 @@ export async function startBulkCalls(calls) {
 }
 
 export async function endCall(callId) {
-  return request(`/call/${callId}/end`, { method: "POST" });
+  return request(`/calls/${callId}/end`, { method: "POST" });
 }
 
 // ---- Campaigns ---------------------------------------------------------

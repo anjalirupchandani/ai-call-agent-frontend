@@ -17,7 +17,6 @@ import {
   X,
 } from "lucide-react";
 import DashboardShell from "../components/DashboardShell";
-import { aiAgents } from "../data/mockData";
 import {
   createCampaign,
   deleteCampaign,
@@ -157,7 +156,7 @@ function CampaignCard({ campaign, busyId, onStart, onPause, onDelete }) {
 
       <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border-soft)] pt-4">
         <span className="flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)]">
-          <Users size={14} /> {campaign.agentId || "Default agent"}
+          <Users size={14} /> Edesy agent
         </span>
         <div className="flex items-center gap-1">
           {(campaign.status === "draft" || campaign.status === "paused") && (
@@ -220,7 +219,6 @@ function CampaignModal({ onClose, onSave, contacts, templates, knowledgeArticles
   const [form, setForm] = useState({
     name: "",
     templateId: templates.find((template) => template.type === "call")?.id || "",
-    agentId: aiAgents[0]?.id || "agt_1",
     selectedContactIds: [],
     selectedKnowledgeArticleIds: [],
     concurrency: 3,
@@ -289,7 +287,6 @@ function CampaignModal({ onClose, onSave, contacts, templates, knowledgeArticles
       await onSave({
         name: form.name.trim(),
         templateId: form.templateId,
-        agentId: form.agentId,
         knowledgeArticleIds: form.selectedKnowledgeArticleIds,
         contacts: campaignContacts,
         concurrency: Number(form.concurrency),
@@ -327,19 +324,12 @@ function CampaignModal({ onClose, onSave, contacts, templates, knowledgeArticles
             <input required placeholder="e.g., August appointment confirmations" value={form.name} onChange={update("name")} className={INPUT_CLASSES} />
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div>
             <Field label="Call template *" hint="Only call templates can be used for campaigns.">
               <select required value={form.templateId} onChange={update("templateId")} className={INPUT_CLASSES}>
                 <option value="">Select a template</option>
                 {templates.filter((template) => template.type === "call").map((template) => (
                   <option key={template.id} value={template.id}>{template.name}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="AI agent">
-              <select value={form.agentId} onChange={update("agentId")} className={INPUT_CLASSES}>
-                {aiAgents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>{agent.name} — {agent.personality}</option>
                 ))}
               </select>
             </Field>

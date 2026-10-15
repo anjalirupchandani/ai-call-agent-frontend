@@ -164,11 +164,13 @@ export default function Pathways() {
         const pathways = await getPathways();
         if (!cancelled) setSavedPathways(Array.isArray(pathways) ? pathways : []);
         if (!cancelled && pathways?.length) {
-          const latest = pathways[0];
-          setPathwayId(latest._id);
-          setPathwayName(latest.name || "Appointment confirmation");
-          setNodes(latest.nodes?.length ? latest.nodes : DEFAULT_NODES);
-          setEdges(latest.edges?.length ? latest.edges : DEFAULT_EDGES);
+          const defaultPathway =
+            pathways.find((pathway) => pathway.name?.toLowerCase().startsWith("v pandit")) ||
+            pathways[0];
+          setPathwayId(defaultPathway._id || defaultPathway.id);
+          setPathwayName(defaultPathway.name || "Appointment confirmation");
+          setNodes(defaultPathway.nodes?.length ? defaultPathway.nodes : DEFAULT_NODES);
+          setEdges(defaultPathway.edges?.length ? defaultPathway.edges : DEFAULT_EDGES);
         }
       } catch (err) {
         console.error("Failed to load pathways:", err);

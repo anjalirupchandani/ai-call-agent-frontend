@@ -49,7 +49,8 @@ export function AuthProvider({ children }) {
 
   // Add this function to update user data
   async function updateUser(userData) {
-    const updatedUser = await apiUpdateUser(userData);
+    const response = await apiUpdateUser(userData);
+    const updatedUser = { ...user, ...(response.user || response), ...userData };
     setUser(updatedUser);
     return updatedUser;
   }

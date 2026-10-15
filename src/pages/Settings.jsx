@@ -24,7 +24,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { changePassword } from "../services/api";
 import DashboardShell from "../components/DashboardShell";
-import { aiAgents } from "../data/mockData";
 
 const SECTIONS = [
   { id: "profile", label: "User Profile", icon: User },
@@ -40,15 +39,16 @@ const inputClasses =
 
 const SETTINGS_STORAGE_PREFIX = "ai_call_agent_settings";
 
-function Toggle({ label, checked, onChange }) {
+function Toggle({ label, checked, onChange, disabled = false }) {
   return (
-    <label className="flex w-full cursor-pointer items-center justify-between py-3">
+    <label className={`flex w-full items-center justify-between py-3 ${disabled ? "cursor-default" : "cursor-pointer"}`}>
       <span className="text-sm text-[var(--color-ink-soft)]">{label}</span>
       <span className="relative ml-4 h-6 w-11 flex-shrink-0">
         <input
           type="checkbox"
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
+          disabled={disabled}
           aria-label={label}
           className="peer sr-only"
         />
@@ -106,7 +106,6 @@ export default function Settings() {
   });
 
   // Agent & Settings state
-  const [defaultAgent, setDefaultAgent] = useState(aiAgents[0]?.id || "");
   const [agentSettings, setAgentSettings] = useState({
     reschedule: true,
     voicemail: false,
@@ -129,6 +128,7 @@ export default function Settings() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -148,28 +148,30 @@ export default function Settings() {
     });
 
     const storageKey = `${SETTINGS_STORAGE_PREFIX}:${user.id || user._id || user.email}`;
+    let parsedSettings = {};
     const savedSettings = localStorage.getItem(storageKey);
     if (savedSettings) {
       try {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.agentSettings) {
-          setAgentSettings((current) => ({ ...current, ...parsedSettings.agentSettings }));
-        }
-        if (parsedSettings.voiceSettings) {
-          setVoiceSettings((current) => ({ ...current, ...parsedSettings.voiceSettings }));
-        }
-        if (parsedSettings.callSettings) {
-          setCallSettings((current) => ({ ...current, ...parsedSettings.callSettings }));
-        }
-        if (parsedSettings.notificationSettings) {
-          setNotificationSettings((current) => ({
-            ...current,
-            ...parsedSettings.notificationSettings,
-          }));
-        }
+        parsedSettings = JSON.parse(savedSettings);
       } catch {
         localStorage.removeItem(storageKey);
       }
+    }
+    parsedSettings = { ...parsedSettings, ...(user.settings || {}) };
+    if (parsedSettings.agentSettings) {
+      setAgentSettings((current) => ({ ...current, ...parsedSettings.agentSettings }));
+    }
+    if (parsedSettings.voiceSettings) {
+      setVoiceSettings((current) => ({ ...current, ...parsedSettings.voiceSettings }));
+    }
+    if (parsedSettings.callSettings) {
+      setCallSettings((current) => ({ ...current, ...parsedSettings.callSettings }));
+    }
+    if (parsedSettings.notificationSettings) {
+      setNotificationSettings((current) => ({
+        ...current,
+        ...parsedSettings.notificationSettings,
+      }));
     }
     setSettingsOwner(storageKey);
   }, [user]);
@@ -241,6 +243,23 @@ export default function Settings() {
     return true;
   };
 
+  const handlePasswordSubmit = async () => {
+    setPasswordLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (!validatePassword()) return;
+      await changePassword(passwordData.currentPassword, passwordData.newPassword);
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSuccess("Password changed successfully.");
+    } catch (err) {
+      setError(err.message || "Unable to change password. Please try again.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -259,27 +278,15 @@ export default function Settings() {
         email: formData.email,
         phone: formData.phone,
         bio: formData.bio,
-        role: formData.role,
         timezone: formData.timezone,
         language: formData.language,
+        settings: {
+          agentSettings,
+          voiceSettings,
+          callSettings,
+          notificationSettings,
+        },
       });
-
-      // If password is being changed
-      if (passwordData.newPassword) {
-        if (!validatePassword()) {
-          setLoading(false);
-          return;
-        }
-        await changePassword(
-          passwordData.currentPassword,
-          passwordData.newPassword,
-        );
-        setPasswordData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-      }
 
       setSuccess("Settings saved successfully!");
       setIsDirty(false);
@@ -414,7 +421,7 @@ export default function Settings() {
                     <input
                       name="role"
                       value={formData.role}
-                      onChange={handleChange}
+                      readOnly
                       className={`${inputClasses} pl-10`}
                       placeholder="User"
                     />
@@ -518,34 +525,25 @@ export default function Settings() {
                     />
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handlePasswordSubmit}
+                  disabled={passwordLoading}
+                  className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {passwordLoading ? "Changing password..." : "Change Password"}
+                </button>
               </div>
             </SectionCard>
 
             {/* AI Agent Settings */}
             <SectionCard id="agent" title="AI Agent Settings">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-[var(--color-ink)]">
-                  Default agent
-                </span>
-                <select
-                  value={defaultAgent}
-                  onChange={(e) => {
-                    setDefaultAgent(e.target.value);
-                    setIsDirty(true);
-                  }}
-                  className={inputClasses}
-                >
-                  {aiAgents.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} — {a.personality}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="mt-4 divide-y divide-[var(--color-border-soft)]">
+              <div className="divide-y divide-[var(--color-border-soft)]">
                 <Toggle
                   label="Allow agent to reschedule calls automatically"
                   checked={agentSettings.reschedule}
+                  disabled
                   onChange={(val) =>
                     handleSettingsChange("agent", "reschedule", val)
                   }
@@ -553,6 +551,7 @@ export default function Settings() {
                 <Toggle
                   label="Let agent leave voicemail on no-answer"
                   checked={agentSettings.voicemail}
+                  disabled
                   onChange={(val) =>
                     handleSettingsChange("agent", "voicemail", val)
                   }
@@ -568,8 +567,9 @@ export default function Settings() {
                     Voice
                   </span>
                   <select
-                    className={inputClasses}
+                    className={`${inputClasses} disabled:cursor-not-allowed disabled:opacity-60`}
                     value={voiceSettings.voice}
+                    disabled
                     onChange={(e) =>
                       handleSettingsChange("voice", "voice", e.target.value)
                     }
@@ -589,6 +589,7 @@ export default function Settings() {
                     max="1.5"
                     step="0.05"
                     value={voiceSettings.speed}
+                    disabled
                     onChange={(e) =>
                       handleSettingsChange(
                         "voice",
@@ -596,7 +597,7 @@ export default function Settings() {
                         parseFloat(e.target.value),
                       )
                     }
-                    className="mt-3 accent-[var(--color-accent)] w-full"
+                    className="mt-3 accent-[var(--color-accent)] w-full disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </label>
               </div>

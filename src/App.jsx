@@ -14,7 +14,7 @@ import CallDetails from "./pages/CallDetails";
 import Templates from "./pages/Templates";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import Pathways from "./pages/Pathways";
-import Callsceduling from "./pages/CallSceduling";
+import CallScheduling from "./pages/CallScheduling";
 import Campaigns from "./pages/Campaigns";
 
 import CampaignDetails from "./pages/CampaignDetails";
@@ -106,7 +106,7 @@ export default function App() {
             path="/dashboard/scheduled-calls"
             element={
               <ProtectedRoute>
-                <Callsceduling />
+                <CallScheduling />
               </ProtectedRoute>
             }
           />

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react";
 import AuthShell from "../components/auth/AuthShell";
 import AuthField from "../components/auth/AuthField";
 import { useAuth } from "../context/AuthContext";
@@ -9,7 +9,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,9 +33,7 @@ export default function Signup() {
 
     setSubmitting(true);
     try {
-      // Only name/email/password are sent to the API — confirmPassword is
-      // a client-side check only, same signup() call as before.
-      await signup({ name: form.name, email: form.email, password: form.password });
+      await signup({ name: form.name, email: form.email, phone: form.phone, password: form.password });
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -72,6 +70,16 @@ export default function Signup() {
           value={form.email}
           onChange={update("email")}
           placeholder="Email address"
+        />
+
+        <AuthField
+          icon={Phone}
+          label="Phone number"
+          type="tel"
+          autoComplete="tel"
+          value={form.phone}
+          onChange={update("phone")}
+          placeholder="Phone number"
         />
 
         <AuthField

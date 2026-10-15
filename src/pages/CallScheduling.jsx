@@ -492,7 +492,7 @@ function ScheduleModal({ onClose, onSave, contacts, pathways = [] }) {
   );
 }
 
-export default function Callsceduling() {
+export default function CallScheduling() {
   const [items, setItems] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [pathways, setPathways] = useState([]);
